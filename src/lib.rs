@@ -1,4 +1,5 @@
 struct State;
+struct Datastore;
 
 // A message passed as information in the planner
 enum Message {
@@ -13,22 +14,23 @@ enum Message {
 }
 
 // This should also be a trait
+#[derive(PartialEq)]
 struct Function;
 
 impl Function {
     // A function reads from and writes to a global datastore. This allows for interaction between
     // tools and capture side effects through update to the datastore.
     // Currently in this model we return an updated datastore.
-    fn call(&self, args: Args, datastore: Datastore) -> (Datastore, Message) {
-        (datastore, Message::Assistant("I have no tools"))
+    fn call(&self, args: Args, datastore: &mut Datastore) -> Message {
+        Message::Assistant("I have no tools".to_string())
     }
 }
 
-struct Args(Vec<String>)
+struct Args(Vec<String>);
 
 enum Action {
     // Query the model with a specific conversation history and available tools
-    Query(CoversationHistor, Vec<Function>),
+    Query(ConversationHistory, Vec<Function>),
     // Call a `Tool` with `Args`
     MakeCall(Function, Args),
     // Finish the conversation and respond to the user.
@@ -36,7 +38,7 @@ enum Action {
 }
 
 // Comprises all the messages in the conversation up to the current point
-struct ConversationHistory(Vec<Message>)
+struct ConversationHistory(Vec<Message>);
 
 // Planning loop handle all interaction with the model, tools and users.
 struct PlanningLoop {
@@ -48,19 +50,20 @@ struct PlanningLoop {
 impl PlanningLoop {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
-    fn loop(state: State, datastore: Datastore, message: Message) -> String {
+    fn run(&self, state: State, datastore: &mut Datastore, message: Message) -> String {
         let mut current_message = message;
+        let mut current_state = state;
         loop {
-            let (state, action) = self.planner(state, message);
+            let action;
+            (current_state, action) = self.planner.plan(current_state, &current_message);
             match action {
                 Action::Query(conv_history, tools) => {
-                    let new_message = self.model.map(conv_history, tools)
-                    current_message = new_message
+                    let new_message = self.model.map(conv_history, tools);
+                    current_message = new_message;
                 }
                 Action::MakeCall(function, args) => {
-                    let (new_datastore, tool_result) = self.tools.get(function).call(args, datastore);
-                    datatore = new_datastore;
-                    current_message = Message::Tool(tool_result);
+                    let tool_result = self.tools.iter().find(|&f| f == &function).unwrap().call(args, datastore);
+                    current_message = tool_result;
                 }
                 Action::Finish(result) => return result
             }
@@ -75,17 +78,19 @@ enum Planner {
 }
 
 impl Planner {
-    fn loop(&self, state: State) {
+    fn plan(&self, state: State, message: &Message) -> (State, Action) {
         match self {
-            Planner::Basic => self.basic_planner(state),
-            Planner::Variable => self.var_planner(state),
+            Planner::Basic => self.basic_planner(state, message),
+            Planner::Variable => self.var_planner(state, message),
         }
     }
 
-    fn basic_planner(&self, state: State, message: Message) -> (State, Action){
-        let new_state = match message {
+    fn basic_planner(&self, state: State, message: &Message) -> (State, Action) {
+        (State, Action::Finish("Nothing I can do".to_string()))
+    }
 
-        }
+    fn var_planner(&self, state: State, message: &Message) -> (State, Action) {
+        (State, Action::Finish("Nothing I can do".to_string()))
     }
 }
 
@@ -94,9 +99,9 @@ impl Planner {
 struct Model;
 
 impl Model {
-    fn map(conv_history: ConversationHistory, tools: Vec<Function>) -> Message {
+    fn map(&self, conv_history: ConversationHistory, tools: Vec<Function>) -> Message {
         // This should be either a tool call or an Assitant message
-        Message::Assistant("I have no idea what I am doing")
+        Message::Assistant("I have no idea what I am doing".to_string())
     }
 }
 
