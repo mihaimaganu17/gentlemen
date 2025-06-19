@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 struct Datastore;
 
 // A message passed as information in the planner
@@ -114,7 +116,9 @@ pub struct VarPlanner {
     memory: Memory,
 }
 
-struct Memory;
+type Memory = HashMap<Variable, ToolCallResult>;
+type Variable = String;
+type ToolCallResult = String;
 
 impl Plan for VarPlanner {
     fn plan(&self, state: State, message: Message) -> (State, Action) {
