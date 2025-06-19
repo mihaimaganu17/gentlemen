@@ -45,13 +45,13 @@ struct ConversationHistory(Vec<Message>);
 type State = ConversationHistory;
 
 // Planning loop handle all interaction with the model, tools and users.
-struct PlanningLoop {
-    planner: Planner,
+struct PlanningLoop<P: Plan> {
+    planner: P,
     model: Model,
     tools: Vec<Function>,
 }
 
-impl PlanningLoop {
+impl<P: Plan> PlanningLoop<P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
     fn run(&self, state: State, datastore: &mut Datastore, message: Message) -> String {
@@ -76,27 +76,16 @@ impl PlanningLoop {
 }
 
 // State passing planner which is plugged into the `PlanningLoop`
-enum PlannerType {
-    Basic,
-    Variable,
+pub trait Plan {
+    fn plan(&self, state: State, message: Message) -> (State, Action);
 }
 
-pub struct Planner {
+pub struct BasicPlanner {
     tools: Vec<Function>,
-    typ: PlannerType,
 }
 
-impl Planner {
-    /// A planning function that, given the latest `message` in the conversation and a `state`
-    /// returns an updated [`State`] and an [`Action`]
+impl Plan for BasicPlanner {
     fn plan(&self, state: State, message: Message) -> (State, Action) {
-        match self.typ {
-            PlannerType::Basic => self.basic_planner(state, message),
-            PlannerType::Variable => self.var_planner(state, message),
-        }
-    }
-
-    fn basic_planner(&self, state: State, message: Message) -> (State, Action) {
         let mut new_state = state;
         new_state.0.push(message.clone());
         match message {
@@ -118,8 +107,17 @@ impl Planner {
             }
         }
     }
+}
 
-    fn var_planner(&self, state: State, message: Message) -> (State, Action) {
+pub struct VarPlanner {
+    tools: Vec<Function>,
+    memory: Memory,
+}
+
+struct Memory;
+
+impl Plan for VarPlanner {
+    fn plan(&self, state: State, message: Message) -> (State, Action) {
         (state, Action::Finish("Nothing I can do".to_string()))
     }
 }
