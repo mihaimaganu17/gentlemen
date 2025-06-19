@@ -122,6 +122,12 @@ type ToolCallResult = String;
 
 impl Plan for VarPlanner {
     fn plan(&self, state: State, message: Message) -> (State, Action) {
+        // We need to make available variables in memory for the next tool calls
+        // let variables = memory.keys()
+        // tools = tools.map(tool.parameters = variables)
+        // This state can also be considered as the entire conversation history
+        let mut new_state = state;
+        new_state.0.push(message.clone());
         (state, Action::Finish("Nothing I can do".to_string()))
     }
 }
