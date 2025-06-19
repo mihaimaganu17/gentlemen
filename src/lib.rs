@@ -1,7 +1,7 @@
-struct State;
 struct Datastore;
 
 // A message passed as information in the planner
+#[derive(Clone)]
 enum Message {
     // Represents user and system messages
     User(String),
@@ -14,7 +14,7 @@ enum Message {
 }
 
 // This should also be a trait
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 struct Function;
 
 impl Function {
@@ -26,6 +26,8 @@ impl Function {
     }
 }
 
+
+#[derive(Clone)]
 struct Args(Vec<String>);
 
 enum Action {
@@ -38,7 +40,9 @@ enum Action {
 }
 
 // Comprises all the messages in the conversation up to the current point
+#[derive(Clone)]
 struct ConversationHistory(Vec<Message>);
+type State = ConversationHistory;
 
 // Planning loop handle all interaction with the model, tools and users.
 struct PlanningLoop {
@@ -55,7 +59,7 @@ impl PlanningLoop {
         let mut current_state = state;
         loop {
             let action;
-            (current_state, action) = self.planner.plan(current_state, &current_message);
+            (current_state, action) = self.planner.plan(current_state, current_message);
             match action {
                 Action::Query(conv_history, tools) => {
                     let new_message = self.model.map(conv_history, tools);
@@ -72,25 +76,51 @@ impl PlanningLoop {
 }
 
 // State passing planner which is plugged into the `PlanningLoop`
-enum Planner {
+enum PlannerType {
     Basic,
     Variable,
 }
 
+pub struct Planner {
+    tools: Vec<Function>,
+    typ: PlannerType,
+}
+
 impl Planner {
-    fn plan(&self, state: State, message: &Message) -> (State, Action) {
-        match self {
-            Planner::Basic => self.basic_planner(state, message),
-            Planner::Variable => self.var_planner(state, message),
+    /// A planning function that, given the latest `message` in the conversation and a `state`
+    /// returns an updated [`State`] and an [`Action`]
+    fn plan(&self, state: State, message: Message) -> (State, Action) {
+        match self.typ {
+            PlannerType::Basic => self.basic_planner(state, message),
+            PlannerType::Variable => self.var_planner(state, message),
         }
     }
 
-    fn basic_planner(&self, state: State, message: &Message) -> (State, Action) {
-        (State, Action::Finish("Nothing I can do".to_string()))
+    fn basic_planner(&self, state: State, message: Message) -> (State, Action) {
+        let mut new_state = state;
+        new_state.0.push(message.clone());
+        match message {
+            Message::User(user_message) => {
+                let action = Action::Query(new_state.clone(), self.tools.clone());
+                (new_state, action)
+            }
+            Message::Tool(tool_result) => {
+                let action = Action::Query(new_state.clone(), self.tools.clone());
+                (new_state, action)
+            }
+            Message::ToolCall(tool, args) => {
+                let action = Action::MakeCall(tool, args);
+                (new_state, action)
+            }
+            Message::Assistant(response) => {
+                let action = Action::Finish(response);
+                (new_state, action)
+            }
+        }
     }
 
-    fn var_planner(&self, state: State, message: &Message) -> (State, Action) {
-        (State, Action::Finish("Nothing I can do".to_string()))
+    fn var_planner(&self, state: State, message: Message) -> (State, Action) {
+        (state, Action::Finish("Nothing I can do".to_string()))
     }
 }
 
