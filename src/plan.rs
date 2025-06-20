@@ -97,7 +97,7 @@ impl Plan for VarPlanner {
         match message {
             Message::User(ref user_message) => {
                 new_state.0.push(message.clone());
-                let action = Action::Query(new_state.clone(), self.tools.clone());
+                let action = Action::Query(new_state.clone(), tools);
                 (new_state, action)
             }
             Message::Tool(tool_result) => {
@@ -105,15 +105,22 @@ impl Plan for VarPlanner {
                 self.memory.insert(x.clone(), tool_result);
                 let var_message = Message::Tool(x.0);
                 new_state.0.push(var_message);
-                let action = Action::Query(new_state.clone(), self.tools.clone());
+                let action = Action::Query(new_state.clone(), tools);
                 (new_state, action)
             }
             Message::ToolCall(ref tool, ref args) => {
-                let new_args = self.expand_args(args);
+                if tool.name() == "inspect" {
+                    let tool_result = self.memory.get(&(args.0[0].clone().try_into().unwrap())).unwrap().clone();
+                    new_state.0.push(Message::Tool(tool_result));
+                    let action = Action::Query(new_state.clone(), tools);
+                    (new_state, action)
+                } else {
+                    let new_args = self.expand_args(args);
 
-                new_state.0.push(message.clone());
-                let action = Action::MakeCall(tool.clone(), new_args);
-                (new_state, action)
+                    new_state.0.push(message.clone());
+                    let action = Action::MakeCall(tool.clone(), new_args);
+                    (new_state, action)
+                }
             }
             Message::Assistant(ref response) => {
                 let action = Action::Finish(response.clone());

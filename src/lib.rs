@@ -32,8 +32,11 @@ impl Function {
     fn format_vars(&self, variables: Vec<&Variable>) -> Self {
         todo!()
     }
-}
 
+    fn name(&self) -> &str {
+        "Anonym"
+    }
+}
 
 #[derive(Clone)]
 struct Args(Vec<Arg>);
@@ -42,6 +45,22 @@ struct Args(Vec<Arg>);
 enum Arg {
     Basic(String),
     Variable(Variable),
+}
+
+impl TryFrom<Arg> for Variable {
+    type Error = ConversionError;
+
+    fn try_from(value: Arg) -> Result<Self, Self::Error> {
+        match value {
+            Arg::Variable(var) => Ok(var),
+            _ => Err(ConversionError::ArgIsNotVariable),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ConversionError {
+    ArgIsNotVariable,
 }
 
 enum Action {
