@@ -1,12 +1,13 @@
 mod plan;
 
 use plan::Variable;
+pub use plan::{Plan, PlanningLoop};
 
-struct Datastore;
+pub struct Datastore;
 
 // A message passed as information in the planner
 #[derive(Clone)]
-enum Message {
+pub enum Message {
     // Represents user and system messages
     User(String),
     Tool(String),
@@ -19,17 +20,17 @@ enum Message {
 
 // This should also be a trait
 #[derive(PartialEq, Clone)]
-struct Function;
+pub struct Function;
 
 impl Function {
     // A function reads from and writes to a global datastore. This allows for interaction between
     // tools and capture side effects through update to the datastore.
     // Currently in this model we return an updated datastore.
-    fn call(&self, args: Args, datastore: &mut Datastore) -> Message {
+    pub fn call(&self, _args: Args, _datastore: &mut Datastore) -> Message {
         Message::Assistant("I have no tools".to_string())
     }
 
-    fn format_vars(&self, variables: Vec<&Variable>) -> Self {
+    fn format_vars(&self, _variables: Vec<&Variable>) -> Self {
         todo!()
     }
 
@@ -39,10 +40,10 @@ impl Function {
 }
 
 #[derive(Clone)]
-struct Args(Vec<Arg>);
+pub struct Args(Vec<Arg>);
 
 #[derive(Clone)]
-enum Arg {
+pub enum Arg {
     Basic(String),
     Variable(Variable),
 }
@@ -63,7 +64,7 @@ pub enum ConversionError {
     ArgIsNotVariable,
 }
 
-enum Action {
+pub enum Action {
     // Query the model with a specific conversation history and available tools
     Query(ConversationHistory, Vec<Function>),
     // Call a `Tool` with `Args`
@@ -74,15 +75,15 @@ enum Action {
 
 // Comprises all the messages in the conversation up to the current point
 #[derive(Clone)]
-struct ConversationHistory(Vec<Message>);
+pub struct ConversationHistory(Vec<Message>);
 type State = ConversationHistory;
 
 // Model is a mapping between a sequence of messages and tool declarations to either a tool call or
 // a response. This should be a trait
-struct Model;
+pub struct Model;
 
 impl Model {
-    fn map(&self, conv_history: ConversationHistory, tools: Vec<Function>) -> Message {
+    pub fn map(&self, _conv_history: ConversationHistory, _tools: Vec<Function>) -> Message {
         // This should be either a tool call or an Assitant message
         Message::Assistant("I have no idea what I am doing".to_string())
     }
@@ -93,15 +94,15 @@ pub enum TaskType {
     DataIndependent,
 }
 
-struct Task {
-    query: String,
-    tools: Vec<Function>,
-    datastores: Vec<Datastore>,
+pub struct Task {
+    _query: String,
+    _tools: Vec<Function>,
+    _datastores: Vec<Datastore>,
 }
 
 // A trace is a sequence of actions that the model takes starting from a user's Message::Query
 // and ending with an `Action::Finish`.
-pub struct Trace(Vec<Action>);
+pub struct Trace(pub Vec<Action>);
 
 #[cfg(test)]
 mod tests {

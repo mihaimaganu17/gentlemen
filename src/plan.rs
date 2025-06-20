@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{Action, Message, Function, State, Model, Args, Arg, Datastore};
 // Planning loop handle all interaction with the model, tools and users.
-struct PlanningLoop<P: Plan> {
+pub struct PlanningLoop<P: Plan> {
     planner: P,
     model: Model,
     tools: Vec<Function>,
@@ -11,7 +11,7 @@ struct PlanningLoop<P: Plan> {
 impl<P: Plan> PlanningLoop<P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
-    fn run(&mut self, state: State, datastore: &mut Datastore, message: Message) -> String {
+    pub fn run(&mut self, state: State, datastore: &mut Datastore, message: Message) -> String {
         let mut current_message = message;
         let mut current_state = state;
         loop {
@@ -46,11 +46,11 @@ impl Plan for BasicPlanner {
         let mut new_state = state;
         new_state.0.push(message.clone());
         match message {
-            Message::User(user_message) => {
+            Message::User(_user_message) => {
                 let action = Action::Query(new_state.clone(), self.tools.clone());
                 (new_state, action)
             }
-            Message::Tool(tool_result) => {
+            Message::Tool(_tool_result) => {
                 let action = Action::Query(new_state.clone(), self.tools.clone());
                 (new_state, action)
             }
@@ -95,7 +95,7 @@ impl Plan for VarPlanner {
         let mut new_state = state;
 
         match message {
-            Message::User(ref user_message) => {
+            Message::User(ref _user_message) => {
                 new_state.0.push(message.clone());
                 let action = Action::Query(new_state.clone(), tools);
                 (new_state, action)
@@ -127,7 +127,6 @@ impl Plan for VarPlanner {
                 new_state.0.push(message);
                 (new_state, action)
             }
-            _ => todo!()
         }
     }
 }
@@ -136,7 +135,7 @@ impl VarPlanner {
     fn expand_args(&self, args: &Args) -> Args {
         Args(args.0.iter().map(|arg| {
             match arg {
-                Arg::Basic(basic_str) => arg.clone(),
+                Arg::Basic(_basic_str) => arg.clone(),
                 Arg::Variable(var) => Arg::Basic(self.memory.get(&var).unwrap().clone())
             }
         })
