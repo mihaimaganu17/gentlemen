@@ -1,6 +1,6 @@
+use crate::{Action, Arg, Args, Datastore, Function, Message, Model, State};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use crate::{Action, Message, Function, State, Model, Args, Arg, Datastore};
 // Planning loop handle all interaction with the model, tools and users.
 pub struct PlanningLoop<P: Plan> {
     planner: P,
@@ -23,10 +23,15 @@ impl<P: Plan> PlanningLoop<P> {
                     current_message = new_message;
                 }
                 Action::MakeCall(function, args) => {
-                    let tool_result = self.tools.iter().find(|&f| f == &function).unwrap().call(args, datastore);
+                    let tool_result = self
+                        .tools
+                        .iter()
+                        .find(|&f| f == &function)
+                        .unwrap()
+                        .call(args, datastore);
                     current_message = tool_result;
                 }
-                Action::Finish(result) => return result
+                Action::Finish(result) => return result,
             }
         }
     }
@@ -88,7 +93,9 @@ type ToolCallResult = String;
 impl Plan for VarPlanner {
     fn plan(&mut self, state: State, message: Message) -> (State, Action) {
         // We need to make available variables in memory for the next tool calls
-        let tools: Vec<Function> = self.tools.iter()
+        let tools: Vec<Function> = self
+            .tools
+            .iter()
             .map(|tool| tool.format_vars(self.memory.keys().collect()))
             .collect();
         // This state can also be considered as the entire conversation history
@@ -110,7 +117,11 @@ impl Plan for VarPlanner {
             }
             Message::ToolCall(ref tool, ref args) => {
                 if tool.name() == "inspect" {
-                    let tool_result = self.memory.get(&(args.0[0].clone().try_into().unwrap())).unwrap().clone();
+                    let tool_result = self
+                        .memory
+                        .get(&(args.0[0].clone().try_into().unwrap()))
+                        .unwrap()
+                        .clone();
                     new_state.0.push(Message::Tool(tool_result));
                     let action = Action::Query(new_state.clone(), tools);
                     (new_state, action)
@@ -133,13 +144,14 @@ impl Plan for VarPlanner {
 
 impl VarPlanner {
     fn expand_args(&self, args: &Args) -> Args {
-        Args(args.0.iter().map(|arg| {
-            match arg {
-                Arg::Basic(_basic_str) => arg.clone(),
-                Arg::Variable(var) => Arg::Basic(self.memory.get(&var).unwrap().clone())
-            }
-        })
-        .collect()
+        Args(
+            args.0
+                .iter()
+                .map(|arg| match arg {
+                    Arg::Basic(_basic_str) => arg.clone(),
+                    Arg::Variable(var) => Arg::Basic(self.memory.get(&var).unwrap().clone()),
+                })
+                .collect(),
         )
     }
 }

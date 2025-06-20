@@ -105,5 +105,4 @@ pub struct Task {
 pub struct Trace(pub Vec<Action>);
 
 #[cfg(test)]
-mod tests {
-}
+mod tests {}
