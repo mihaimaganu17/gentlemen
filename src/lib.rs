@@ -35,7 +35,13 @@ impl Function {
 
 
 #[derive(Clone)]
-struct Args(Vec<String>);
+struct Args(Vec<Arg>);
+
+#[derive(Clone)]
+enum Arg {
+    Basic(String),
+    Variable(Variable),
+}
 
 enum Action {
     // Query the model with a specific conversation history and available tools
@@ -61,7 +67,7 @@ struct PlanningLoop<P: Plan> {
 impl<P: Plan> PlanningLoop<P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
-    fn run(&self, state: State, datastore: &mut Datastore, message: Message) -> String {
+    fn run(&mut self, state: State, datastore: &mut Datastore, message: Message) -> String {
         let mut current_message = message;
         let mut current_state = state;
         loop {
@@ -84,7 +90,7 @@ impl<P: Plan> PlanningLoop<P> {
 
 // State passing planner which is plugged into the `PlanningLoop`
 pub trait Plan {
-    fn plan(&self, state: State, message: Message) -> (State, Action);
+    fn plan(&mut self, state: State, message: Message) -> (State, Action);
 }
 
 pub struct BasicPlanner {
@@ -92,7 +98,7 @@ pub struct BasicPlanner {
 }
 
 impl Plan for BasicPlanner {
-    fn plan(&self, state: State, message: Message) -> (State, Action) {
+    fn plan(&mut self, state: State, message: Message) -> (State, Action) {
         let mut new_state = state;
         new_state.0.push(message.clone());
         match message {
@@ -124,6 +130,7 @@ pub struct VarPlanner {
 pub const ID_MANAGER: AtomicUsize = AtomicUsize::new(0);
 
 type Memory = HashMap<Variable, ToolCallResult>;
+#[derive(Eq, Hash, PartialEq, Clone)]
 pub struct Variable(String);
 
 impl Variable {
@@ -135,7 +142,7 @@ impl Variable {
 type ToolCallResult = String;
 
 impl Plan for VarPlanner {
-    fn plan(&self, state: State, message: Message) -> (State, Action) {
+    fn plan(&mut self, state: State, message: Message) -> (State, Action) {
         // We need to make available variables in memory for the next tool calls
         let tools: Vec<Function> = self.tools.iter()
             .map(|tool| tool.format_vars(self.memory.keys().collect()))
@@ -151,13 +158,34 @@ impl Plan for VarPlanner {
             }
             Message::Tool(tool_result) => {
                 let x = Variable::fresh();
+                self.memory.insert(x.clone(), tool_result);
                 let var_message = Message::Tool(x.0);
                 new_state.0.push(var_message);
                 let action = Action::Query(new_state.clone(), self.tools.clone());
                 (new_state, action)
             }
+            Message::ToolCall(ref tool, ref args) => {
+                let new_args = self.expand_args(args);
+
+                new_state.0.push(message.clone());
+                let action = Action::MakeCall(tool.clone(), new_args);
+                (new_state, action)
+            }
             _ => todo!()
         }
+    }
+}
+
+impl VarPlanner {
+    fn expand_args(&self, args: &Args) -> Args {
+        Args(args.0.iter().map(|arg| {
+            match arg {
+                Arg::Basic(basic_str) => arg.clone(),
+                Arg::Variable(var) => Arg::Basic(self.memory.get(&var).unwrap().clone())
+            }
+        })
+        .collect()
+        )
     }
 }
 
