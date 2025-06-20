@@ -69,6 +69,21 @@ impl Model {
     }
 }
 
+pub enum TaskType {
+    DataDependent,
+    DataIndependent,
+}
+
+struct Task {
+    query: String,
+    tools: Vec<Function>,
+    datastores: Vec<Datastore>,
+}
+
+// A trace is a sequence of actions that the model takes starting from a user's Message::Query
+// and ending with an `Action::Finish`.
+pub struct Trace(Vec<Action>);
+
 #[cfg(test)]
 mod tests {
 }
