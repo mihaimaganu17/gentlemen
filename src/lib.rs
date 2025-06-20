@@ -26,6 +26,10 @@ impl Function {
     fn call(&self, args: Args, datastore: &mut Datastore) -> Message {
         Message::Assistant("I have no tools".to_string())
     }
+
+    fn format_vars(&self, variables: Vec<&Variable>) -> Self {
+        todo!()
+    }
 }
 
 
@@ -123,12 +127,13 @@ type ToolCallResult = String;
 impl Plan for VarPlanner {
     fn plan(&self, state: State, message: Message) -> (State, Action) {
         // We need to make available variables in memory for the next tool calls
-        // let variables = memory.keys()
-        // tools = tools.map(tool.parameters = variables)
+        let tools: Vec<Function> = self.tools.iter()
+            .map(|tool| tool.format_vars(self.memory.keys().collect()))
+            .collect();
         // This state can also be considered as the entire conversation history
         let mut new_state = state;
         new_state.0.push(message.clone());
-        (state, Action::Finish("Nothing I can do".to_string()))
+        (new_state, Action::Finish("Nothing I can do".to_string()))
     }
 }
 
