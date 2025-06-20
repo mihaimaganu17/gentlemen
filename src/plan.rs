@@ -76,7 +76,7 @@ pub struct VarPlanner {
     memory: Memory,
 }
 
-pub const ID_MANAGER: AtomicUsize = AtomicUsize::new(0);
+pub static ID_MANAGER: AtomicUsize = AtomicUsize::new(0);
 
 type Memory = HashMap<Variable, ToolCallResult>;
 #[derive(Eq, Hash, PartialEq, Clone)]
@@ -149,7 +149,7 @@ impl VarPlanner {
                 .iter()
                 .map(|arg| match arg {
                     Arg::Basic(_basic_str) => arg.clone(),
-                    Arg::Variable(var) => Arg::Basic(self.memory.get(&var).unwrap().clone()),
+                    Arg::Variable(var) => Arg::Basic(self.memory.get(var).unwrap().clone()),
                 })
                 .collect(),
         )
