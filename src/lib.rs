@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 struct Datastore;
 
@@ -120,8 +121,17 @@ pub struct VarPlanner {
     memory: Memory,
 }
 
+pub const ID_MANAGER: AtomicUsize = AtomicUsize::new(0);
+
 type Memory = HashMap<Variable, ToolCallResult>;
-type Variable = String;
+pub struct Variable(String);
+
+impl Variable {
+    pub fn fresh() -> Self {
+        Self(format!("{}", ID_MANAGER.fetch_add(1, Ordering::Relaxed)))
+    }
+}
+
 type ToolCallResult = String;
 
 impl Plan for VarPlanner {
@@ -132,8 +142,22 @@ impl Plan for VarPlanner {
             .collect();
         // This state can also be considered as the entire conversation history
         let mut new_state = state;
-        new_state.0.push(message.clone());
-        (new_state, Action::Finish("Nothing I can do".to_string()))
+
+        match message {
+            Message::User(ref user_message) => {
+                new_state.0.push(message.clone());
+                let action = Action::Query(new_state.clone(), self.tools.clone());
+                (new_state, action)
+            }
+            Message::Tool(tool_result) => {
+                let x = Variable::fresh();
+                let var_message = Message::Tool(x.0);
+                new_state.0.push(var_message);
+                let action = Action::Query(new_state.clone(), self.tools.clone());
+                (new_state, action)
+            }
+            _ => todo!()
+        }
     }
 }
 
