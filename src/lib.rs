@@ -1,22 +1,11 @@
+mod message;
 mod plan;
 
+pub use message::{Message, LabeledMessage};
 use plan::Variable;
 pub use plan::{Plan, PlanningLoop};
 
 pub struct Datastore;
-
-// A message passed as information in the planner
-#[derive(Clone)]
-pub enum Message {
-    // Represents user and system messages
-    User(String),
-    Tool(String),
-    // Represents a model's resuts to call a tool `Function` with arguments specified as an array
-    // of strings.
-    ToolCall(Function, Args),
-    // Represents a natural language response `r` from the model.
-    Assistant(String),
-}
 
 // This should also be a trait
 #[derive(PartialEq, Clone)]

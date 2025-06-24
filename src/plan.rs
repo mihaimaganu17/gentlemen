@@ -1,14 +1,17 @@
-use crate::{Action, Arg, Args, Datastore, Function, Message, Model, State};
+use crate::{Action, Arg, Args, Datastore, Function, LabeledMessage, Message, Model, State};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::marker::PhantomData;
+
 // Planning loop handle all interaction with the model, tools and users.
-pub struct PlanningLoop<P: Plan> {
+pub struct PlanningLoop<M: Clone, P: Plan<M>> {
     planner: P,
     model: Model,
     tools: Vec<Function>,
+    phantom: PhantomData<M>,
 }
 
-impl<P: Plan> PlanningLoop<P> {
+impl<P: Plan<Message>> PlanningLoop<Message, P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
     pub fn run(&mut self, state: State, datastore: &mut Datastore, message: Message) -> String {
@@ -37,16 +40,24 @@ impl<P: Plan> PlanningLoop<P> {
     }
 }
 
+impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
+    // At each iteration of the loop, the current `state`, the latest `message` of the conversation
+    // and the `datastore` are passed.
+    pub fn run(&mut self, state: State, datastore: &mut Datastore, message: LabeledMessage) -> String {
+        todo!()
+    }
+}
+
 // State passing planner which is plugged into the `PlanningLoop`
-pub trait Plan {
-    fn plan(&mut self, state: State, message: Message) -> (State, Action);
+pub trait Plan<M> {
+    fn plan(&mut self, state: State, message: M) -> (State, Action);
 }
 
 pub struct BasicPlanner {
     tools: Vec<Function>,
 }
 
-impl Plan for BasicPlanner {
+impl Plan<Message> for BasicPlanner {
     fn plan(&mut self, state: State, message: Message) -> (State, Action) {
         let mut new_state = state;
         new_state.0.push(message.clone());
@@ -90,7 +101,7 @@ impl Variable {
 
 type ToolCallResult = String;
 
-impl Plan for VarPlanner {
+impl Plan<Message> for VarPlanner {
     fn plan(&mut self, state: State, message: Message) -> (State, Action) {
         // We need to make available variables in memory for the next tool calls
         let tools: Vec<Function> = self
@@ -153,5 +164,17 @@ impl VarPlanner {
                 })
                 .collect(),
         )
+    }
+}
+
+pub struct TaintTrackingPlanner {
+    tools: Vec<Function>,
+    memory: Memory,
+}
+
+// Taint-tracking planner which is plugged into the `PlanningLoop`
+impl Plan<LabeledMessage> for TaintTrackingPlanner {
+    fn plan(&mut self, state: State, message: LabeledMessage) -> (State, Action) {
+        todo!()
     }
 }
