@@ -1,4 +1,4 @@
-use crate::{Args, Function};
+use crate::{Args, Function, Label};
 
 // A message passed as information in the planner
 #[derive(Clone)]
@@ -15,9 +15,6 @@ pub enum Message {
 
 #[derive(Clone)]
 pub struct LabeledMessage {
-    message: Message,
-    label: Label,
+    pub message: Message,
+    pub label: Label,
 }
-
-#[derive(Clone)]
-pub struct Label;

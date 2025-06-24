@@ -7,6 +7,23 @@ pub use plan::{Plan, PlanningLoop};
 
 pub struct Datastore;
 
+impl Datastore {
+    pub fn label(var: &Variable) -> Label {
+        Label
+    }
+}
+
+#[derive(PartialEq, Clone)]
+pub struct Label;
+
+pub struct Policy;
+
+impl Policy {
+    fn is_allowed(&self, action: &Action) -> bool {
+        true
+    }
+}
+
 // This should also be a trait
 #[derive(PartialEq, Clone)]
 pub struct Function;
@@ -17,6 +34,33 @@ impl Function {
     // Currently in this model we return an updated datastore.
     pub fn call(&self, _args: Args, _datastore: &mut Datastore) -> Message {
         Message::Assistant("I have no tools".to_string())
+    }
+
+    fn format_vars(&self, _variables: Vec<&Variable>) -> Self {
+        todo!()
+    }
+
+    fn name(&self) -> &str {
+        "Anonym"
+    }
+}
+
+// This should also be a trait
+#[derive(PartialEq, Clone)]
+pub struct LabeledFunction {
+    function: Function,
+    label: Label,
+}
+
+impl LabeledFunction {
+    // A function reads from and writes to a global datastore. This allows for interaction between
+    // tools and capture side effects through update to the datastore.
+    // Currently in this model we return an updated datastore.
+    pub fn call(&self, args: Args, datastore: &mut Datastore) -> LabeledMessage {
+        LabeledMessage {
+            message: self.function.call(args, datastore),
+            label: Label,
+        }
     }
 
     fn format_vars(&self, _variables: Vec<&Variable>) -> Self {
@@ -48,6 +92,15 @@ impl TryFrom<Arg> for Variable {
     }
 }
 
+#[derive(Clone)]
+pub struct LabeledArgs(Vec<LabeledArg>);
+
+#[derive(Clone)]
+pub struct LabeledArg {
+    arg: Arg,
+    label: Label,
+}
+
 #[derive(Debug)]
 pub enum ConversionError {
     ArgIsNotVariable,
@@ -58,6 +111,15 @@ pub enum Action {
     Query(ConversationHistory, Vec<Function>),
     // Call a `Tool` with `Args`
     MakeCall(Function, Args),
+    // Finish the conversation and respond to the user.
+    Finish(String),
+}
+
+pub enum LabeledAction {
+    // Query the model with a specific conversation history and available tools
+    Query(ConversationHistory, Vec<LabeledFunction>),
+    // Call a `Tool` with `Args`
+    MakeCall(LabeledFunction, LabeledArgs),
     // Finish the conversation and respond to the user.
     Finish(String),
 }

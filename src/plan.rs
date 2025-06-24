@@ -1,4 +1,4 @@
-use crate::{Action, Arg, Args, Datastore, Function, LabeledMessage, Message, Model, State};
+use crate::{Action, Arg, Args, Datastore, Function, LabeledMessage, Message, Model, State, Policy, Label};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::marker::PhantomData;
@@ -45,6 +45,44 @@ impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
     // and the `datastore` are passed.
     pub fn run(&mut self, state: State, datastore: &mut Datastore, message: LabeledMessage) -> String {
         todo!()
+    }
+
+    pub fn run_with_policy(&mut self, state: State, datastore: &mut Datastore, message: LabeledMessage, policy: Policy) -> String {
+        let mut current_message = message;
+        let mut current_state = state;
+        loop {
+            let action;
+            (current_state, action) = self.planner.plan(current_state, current_message.clone());
+            match action {
+                Action::Query(conv_history, tools) => {
+                    let new_message = self.model.map(conv_history, tools);
+                    // TODO: Create label for this message
+                    current_message = LabeledMessage {
+                        message: new_message,
+                        label: Label,
+                    }
+                }
+                Action::MakeCall(ref function, ref args) => {
+                    // Here both `function` and `args` have a label
+                    if !policy.is_allowed(&action) {
+                        // Do not perform the action
+                        continue;
+                    }
+                    let tool_result = self
+                        .tools
+                        .iter()
+                        .find(|&f| f == function)
+                        .unwrap()
+                        .call(args.clone(), datastore);
+                    // TODO: Create label for this message
+                    current_message = LabeledMessage {
+                        message: tool_result,
+                        label: Label,
+                    }
+                }
+                Action::Finish(result) => return result,
+            }
+        }
     }
 }
 
