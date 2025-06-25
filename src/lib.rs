@@ -1,5 +1,6 @@
 mod message;
 mod plan;
+pub mod ifc;
 
 pub use message::{LabeledMessage, Message};
 use plan::Variable;
