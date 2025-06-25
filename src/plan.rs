@@ -1,7 +1,9 @@
-use crate::{Action, Arg, Args, Datastore, Function, LabeledMessage, Message, Model, State, Policy, Label};
+use crate::{
+    Action, Arg, Args, Datastore, Function, Label, LabeledMessage, Message, Model, Policy, State,
+};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::marker::PhantomData;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 // Planning loop handle all interaction with the model, tools and users.
 pub struct PlanningLoop<M: Clone, P: Plan<M>> {
@@ -43,11 +45,22 @@ impl<P: Plan<Message>> PlanningLoop<Message, P> {
 impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
-    pub fn run(&mut self, state: State, datastore: &mut Datastore, message: LabeledMessage) -> String {
+    pub fn run(
+        &mut self,
+        state: State,
+        datastore: &mut Datastore,
+        message: LabeledMessage,
+    ) -> String {
         todo!()
     }
 
-    pub fn run_with_policy(&mut self, state: State, datastore: &mut Datastore, message: LabeledMessage, policy: Policy) -> String {
+    pub fn run_with_policy(
+        &mut self,
+        state: State,
+        datastore: &mut Datastore,
+        message: LabeledMessage,
+        policy: Policy,
+    ) -> String {
         let mut current_message = message;
         let mut current_state = state;
         loop {

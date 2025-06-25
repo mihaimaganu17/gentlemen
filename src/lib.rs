@@ -1,7 +1,7 @@
 mod message;
 mod plan;
 
-pub use message::{Message, LabeledMessage};
+pub use message::{LabeledMessage, Message};
 use plan::Variable;
 pub use plan::{Plan, PlanningLoop};
 
@@ -117,7 +117,7 @@ pub enum Action {
 
 pub enum LabeledAction {
     // Query the model with a specific conversation history and available tools
-    Query(ConversationHistory, Vec<LabeledFunction>),
+    Query(LabeledConversationHistory, Vec<LabeledFunction>),
     // Call a `Tool` with `Args`
     MakeCall(LabeledFunction, LabeledArgs),
     // Finish the conversation and respond to the user.
@@ -128,6 +128,12 @@ pub enum LabeledAction {
 #[derive(Clone)]
 pub struct ConversationHistory(Vec<Message>);
 type State = ConversationHistory;
+
+#[derive(Clone)]
+pub struct LabeledConversationHistory {
+    conv: ConversationHistory,
+    label: Label,
+}
 
 // Model is a mapping between a sequence of messages and tool declarations to either a tool call or
 // a response. This should be a trait
