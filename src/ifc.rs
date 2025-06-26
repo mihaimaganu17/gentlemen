@@ -48,3 +48,46 @@ impl Confidentiality {
         Self::High
     }
 }
+
+#[derive(Debug, PartialEq)]
+pub enum Integrity {
+    // Low integrity
+    Untrusted = 0,
+    // High integrity
+    Trusted = 1,
+}
+
+impl PartialOrd for Integrity {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.partial_cmp(other)
+    }
+}
+
+impl Lattice for Integrity {
+    fn join(self, other: Self) -> Self {
+        if self <= other {
+            other
+        } else {
+            self
+        }
+    }
+
+    fn meet(self, other: Self) -> Self {
+        if self <= other {
+            self
+        } else {
+            other
+        }
+    }
+}
+
+impl Integrity {
+    pub fn trusted() -> Self {
+        Self::Trusted
+    }
+
+    pub fn untrusted() -> Self {
+        Self::Untrusted
+    }
+}
+

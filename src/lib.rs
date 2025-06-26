@@ -158,15 +158,6 @@ pub struct Task {
     _datastores: Vec<Datastore>,
 }
 
-enum _Confidentiality {
-    High(_Secret),
-    Low(_Public),
-}
-
-// Public <= Secret (partial order)
-struct _Public;
-struct _Secret;
-
 enum _Integrity {
     Trusted(_HighIntegrity),
     Untrusted(_LowIntegrity),
