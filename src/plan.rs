@@ -1,22 +1,26 @@
 use crate::{
     Action, Arg, Args, Datastore, Function, Label, LabeledMessage, Message, Model, Policy, State,
+    openai::LlmClient,
 };
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use async_openai::types::{ChatCompletionTool, ChatCompletionRequestUserMessage,
+    ChatCompletionRequestToolMessage,
+};
 
 // Planning loop handle all interaction with the model, tools and users.
 pub struct PlanningLoop<M: Clone, P: Plan<M>> {
     planner: P,
-    model: Model,
-    tools: Vec<Function>,
+    model: LlmClient,
+    tools: Vec<ChatCompletionTool>,
     phantom: PhantomData<M>,
 }
 
 impl<P: Plan<Message>> PlanningLoop<Message, P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
-    pub fn run(&mut self, state: State, datastore: &mut Datastore, message: Message) -> String {
+    pub async fn run(&mut self, state: State, datastore: &mut Datastore, message: Message) -> String {
         let mut current_message = message;
         let mut current_state = state;
         loop {
@@ -24,7 +28,8 @@ impl<P: Plan<Message>> PlanningLoop<Message, P> {
             (current_state, action) = self.planner.plan(current_state, current_message);
             match action {
                 Action::Query(conv_history, tools) => {
-                    let new_message = self.model.map(conv_history, tools);
+                    let messages = conv.history.into_iter().map(|f| f.into()).collect();
+                    let new_message = self.model.run_request(messages, tools);
                     current_message = new_message;
                 }
                 Action::MakeCall(function, args) => {

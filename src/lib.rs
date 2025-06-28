@@ -4,9 +4,11 @@ pub mod ifc;
 pub mod openai;
 
 pub use message::{LabeledMessage, Message};
-use plan::Variable;
 pub use plan::{Plan, PlanningLoop};
 pub use ifc::{ProductLattice, Confidentiality, Integrity};
+
+use plan::Variable;
+use async_openai::types::AssistantTools;
 
 pub struct Datastore;
 
@@ -38,7 +40,7 @@ impl Function {
     // tools and capture side effects through update to the datastore.
     // Currently in this model we return an updated datastore.
     pub fn call(&self, _args: Args, _datastore: &mut Datastore) -> Message {
-        Message::Assistant("I have no tools".to_string())
+        Message::Tool("I have no tools".to_string())
     }
 
     fn format_vars(&self, _variables: Vec<&Variable>) -> Self {
@@ -113,16 +115,16 @@ pub enum ConversionError {
 
 pub enum Action {
     // Query the model with a specific conversation history and available tools
-    Query(ConversationHistory, Vec<Function>),
+    Query(ConversationHistory<Message>, Vec<Function>),
     // Call a `Tool` with `Args`
     MakeCall(Function, Args),
     // Finish the conversation and respond to the user.
     Finish(String),
 }
 
-pub enum LabeledAction {
+pub enum LabeledAction<M> {
     // Query the model with a specific conversation history and available tools
-    Query(LabeledConversationHistory, Vec<LabeledFunction>),
+    Query(LabeledConversationHistory<M>, Vec<LabeledFunction>),
     // Call a `Tool` with `Args`
     MakeCall(LabeledFunction, LabeledArgs),
     // Finish the conversation and respond to the user.
@@ -131,12 +133,12 @@ pub enum LabeledAction {
 
 // Comprises all the messages in the conversation up to the current point
 #[derive(Clone)]
-pub struct ConversationHistory(Vec<Message>);
-type State = ConversationHistory;
+pub struct ConversationHistory<T>(Vec<T>);
+type State = ConversationHistory<Message>;
 
 #[derive(Clone)]
-pub struct LabeledConversationHistory {
-    conv: ConversationHistory,
+pub struct LabeledConversationHistory<M> {
+    conv: ConversationHistory<M>,
     label: Label,
 }
 
@@ -145,7 +147,7 @@ pub struct LabeledConversationHistory {
 pub struct Model;
 
 impl Model {
-    pub fn map(&self, _conv_history: ConversationHistory, _tools: Vec<Function>) -> Message {
+    pub fn map(&self, _conv_history: ConversationHistory<Message>, _tools: Vec<Function>) -> Message {
         // This should be either a tool call or an Assitant message
         Message::Assistant("I have no idea what I am doing".to_string())
     }
@@ -161,9 +163,6 @@ pub struct Task {
     _tools: Vec<Function>,
     _datastores: Vec<Datastore>,
 }
-
-struct _HighIntegrity;
-struct _LowIntegrity;
 
 // Planners get instrumented with dynamic information-flow control via taint-tracking. For this,
 // labels are attached to messages, actions, tool arguments and results, and vairables in the
