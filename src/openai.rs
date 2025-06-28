@@ -1,4 +1,13 @@
-use async_openai::{Client, config::OpenAIConfig, types::{CreateCompletionRequestArgs, CreateChatCompletionRequestArgs, CreateCompletionResponse, Prompt, ChatCompletionRequestMessage, ChatCompletionTool, CreateChatCompletionResponse}, error::OpenAIError};
+use async_openai::{
+    Client,
+    config::OpenAIConfig,
+    error::OpenAIError,
+    types::{
+        ChatCompletionRequestMessage, ChatCompletionTool, CreateChatCompletionRequestArgs,
+        CreateChatCompletionResponse, CreateCompletionRequestArgs, CreateCompletionResponse,
+        Prompt,
+    },
+};
 
 pub struct LlmClient {
     client: Client<OpenAIConfig>,
@@ -12,12 +21,14 @@ impl LlmClient {
             .with_org_id("buciumede");
 
         let client = Client::with_config(config);
-        Self {
-            client
-        }
+        Self { client }
     }
 
-    pub async fn completion<V: Into<Prompt>>(&self, model: &str, prompt: V) -> Result<CreateCompletionResponse, OpenAIError> {
+    pub async fn completion<V: Into<Prompt>>(
+        &self,
+        model: &str,
+        prompt: V,
+    ) -> Result<CreateCompletionResponse, OpenAIError> {
         // Create a `CreateCompletionRequest`
         let request = CreateCompletionRequestArgs::default()
             .model(model)
@@ -25,14 +36,14 @@ impl LlmClient {
             .max_tokens(100_u32)
             .build()?;
 
-        let response = self.client
-            .completions()
-            .create(request)
-            .await?;
+        let response = self.client.completions().create(request).await?;
         Ok(response)
     }
 
-    pub async fn chat<M: Into<Vec<ChatCompletionRequestMessage>>, T: Into<Vec<ChatCompletionTool>>>(
+    pub async fn chat<
+        M: Into<Vec<ChatCompletionRequestMessage>>,
+        T: Into<Vec<ChatCompletionTool>>,
+    >(
         &self,
         messages: M,
         tools: T,
@@ -47,10 +58,7 @@ impl LlmClient {
             .max_completion_tokens(500_u32)
             .build()?;
 
-        let response = self.client
-            .chat()
-            .create(request)
-            .await?;
+        let response = self.client.chat().create(request).await?;
         Ok(response)
     }
 }
@@ -69,7 +77,10 @@ mod tests {
         // let model = "gpt-3.5-turbo-instruct";
         let model = "llama3.2";
         let prompt = "Tell me the recipe of alfredo pasta";
-        let response = client.completion(model, prompt).await.expect("Failed to request model completion");
+        let response = client
+            .completion(model, prompt)
+            .await
+            .expect("Failed to request model completion");
 
         println!("{}", response.choices.first().unwrap().text);
     }

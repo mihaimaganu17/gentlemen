@@ -1,11 +1,11 @@
-mod message;
-mod plan;
 pub mod ifc;
+mod message;
 pub mod openai;
+mod plan;
 
+pub use ifc::{Confidentiality, Integrity, ProductLattice};
 pub use message::{LabeledMessage, Message};
 pub use plan::{Plan, PlanningLoop};
-pub use ifc::{ProductLattice, Confidentiality, Integrity};
 
 // use plan::Variable;
 use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
@@ -126,7 +126,10 @@ pub enum ConversionError {
 
 pub enum Action {
     // Query the model with a specific conversation history and available tools
-    Query(ConversationHistory<ChatCompletionRequestMessage>, Vec<ChatCompletionTool>),
+    Query(
+        ConversationHistory<ChatCompletionRequestMessage>,
+        Vec<ChatCompletionTool>,
+    ),
     // Call a `Tool` with `Args`
     MakeCall(Function, Args),
     // Finish the conversation and respond to the user.
@@ -161,7 +164,11 @@ pub struct LabeledConversationHistory<M> {
 pub struct Model;
 
 impl Model {
-    pub fn map(&self, _conv_history: ConversationHistory<Message>, _tools: Vec<Function>) -> Message {
+    pub fn map(
+        &self,
+        _conv_history: ConversationHistory<Message>,
+        _tools: Vec<Function>,
+    ) -> Message {
         // This should be either a tool call or an Assitant message
         todo!()
     }

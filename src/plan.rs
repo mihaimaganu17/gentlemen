@@ -1,15 +1,12 @@
-use crate::{
-    Action, Args, Datastore, Function, Message, State,
-    openai::LlmClient,
+use crate::{Action, Args, Datastore, Function, Message, State, openai::LlmClient};
+use async_openai::{
+    error::OpenAIError,
+    types::{
+        ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestToolMessageArgs,
+        ChatCompletionRequestUserMessageArgs, ChatCompletionTool, FunctionCall, Role,
+    },
 };
 use std::marker::PhantomData;
-use async_openai::{
-    types::{ChatCompletionTool, ChatCompletionRequestUserMessageArgs,
-        ChatCompletionRequestToolMessageArgs, Role, FunctionCall,
-        ChatCompletionRequestAssistantMessageArgs,
-    },
-    error::OpenAIError,
-};
 
 // Planning loop handle all interaction with the model, tools and users.
 pub struct PlanningLoop<M: Clone, P: Plan<M>> {
@@ -32,11 +29,13 @@ impl<P: Plan<Message>> PlanningLoop<Message, P> {
         let mut current_state = state;
         loop {
             let action;
-            (current_state, action) = self.planner.plan(current_state, current_message)
+            (current_state, action) = self
+                .planner
+                .plan(current_state, current_message)
                 .map_err(|_| PlanError::CannotPlan)?;
             match action {
                 Action::Query(conv_history, tools) => {
-                    let chat_request= self.model.chat(conv_history.0, tools);
+                    let chat_request = self.model.chat(conv_history.0, tools);
                     current_message = chat_request.await?.choices[0].message.clone();
                 }
                 Action::MakeCall(function, args) => {
@@ -135,14 +134,18 @@ impl Plan<Message> for BasicPlanner {
         let (new_state, action) = match role {
             Role::User => {
                 let conv_message = ChatCompletionRequestUserMessageArgs::default()
-                    .content(message.content.ok_or(PlanError::NoUserContent)?).build()?.into();
+                    .content(message.content.ok_or(PlanError::NoUserContent)?)
+                    .build()?
+                    .into();
                 new_state.0.push(conv_message);
                 let action = Action::Query(new_state.clone(), self.tools.clone());
                 (new_state, action)
             }
             Role::Tool => {
                 let conv_message = ChatCompletionRequestToolMessageArgs::default()
-                    .content(message.content.ok_or(PlanError::NoToolContent)?).build()?.into();
+                    .content(message.content.ok_or(PlanError::NoToolContent)?)
+                    .build()?
+                    .into();
                 new_state.0.push(conv_message);
                 let action = Action::Query(new_state.clone(), self.tools.clone());
                 (new_state, action)

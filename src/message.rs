@@ -1,5 +1,5 @@
 use crate::{Args, Function, Label};
-use async_openai::types::{ChatCompletionResponseMessage};
+use async_openai::types::ChatCompletionResponseMessage;
 
 // A message passed as information in the planner
 #[derive(Clone)]
