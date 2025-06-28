@@ -1,6 +1,7 @@
 mod message;
 mod plan;
 pub mod ifc;
+pub mod openai;
 
 pub use message::{LabeledMessage, Message};
 use plan::Variable;
