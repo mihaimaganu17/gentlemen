@@ -3,7 +3,7 @@ use async_openai::types::{ChatCompletionResponseMessage};
 
 // A message passed as information in the planner
 #[derive(Clone)]
-pub enum Message1 {
+pub enum _Message1 {
     // Represents user and system messages
     User(String),
     Tool(String),

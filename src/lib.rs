@@ -28,7 +28,7 @@ pub type Label1 = ProductLattice<Confidentiality, Integrity>;
 pub struct Policy;
 
 impl Policy {
-    fn is_allowed(&self, _action: &Action) -> bool {
+    fn _is_allowed(&self, _action: &Action) -> bool {
         true
     }
 }
@@ -51,7 +51,7 @@ impl Function {
     }
     */
 
-    fn name(&self) -> &str {
+    fn _name(&self) -> &str {
         "Anonym"
     }
 }
@@ -89,7 +89,7 @@ pub struct ArgsTemp(Vec<Arg>);
 */
 
 #[derive(Clone)]
-pub struct Args(String);
+pub struct Args(pub String);
 
 #[derive(Clone)]
 pub enum Arg {
