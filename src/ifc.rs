@@ -11,18 +11,12 @@ pub trait Lattice: PartialOrd + Sized {
     fn meet(self, other: Self) -> Option<Self>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub enum Confidentiality {
     // Public information
     Low = 0,
     // Secret information
     High = 1,
-}
-
-impl PartialOrd for Confidentiality {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.partial_cmp(other)
-    }
 }
 
 impl Lattice for Confidentiality {
@@ -53,18 +47,12 @@ impl Confidentiality {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub enum Integrity {
     // Low integrity
     Untrusted = 0,
     // High integrity
     Trusted = 1,
-}
-
-impl PartialOrd for Integrity {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.partial_cmp(other)
-    }
 }
 
 impl Lattice for Integrity {

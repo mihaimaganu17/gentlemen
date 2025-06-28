@@ -15,7 +15,6 @@ pub enum Message1 {
 }
 
 // A message passed as information in the planner
-#[derive(Clone)]
 pub type Message = ChatCompletionResponseMessage;
 
 #[derive(Clone)]

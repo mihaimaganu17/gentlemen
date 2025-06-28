@@ -7,16 +7,18 @@ pub use message::{LabeledMessage, Message};
 pub use plan::{Plan, PlanningLoop};
 pub use ifc::{ProductLattice, Confidentiality, Integrity};
 
-use plan::Variable;
-use async_openai::types::AssistantTools;
+// use plan::Variable;
+use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
 
 pub struct Datastore;
 
+/*
 impl Datastore {
     pub fn label(var: &Variable) -> Label {
         Label
     }
 }
+*/
 
 #[derive(PartialEq, Clone)]
 pub struct Label;
@@ -26,32 +28,35 @@ pub type Label1 = ProductLattice<Confidentiality, Integrity>;
 pub struct Policy;
 
 impl Policy {
-    fn is_allowed(&self, action: &Action) -> bool {
+    fn is_allowed(&self, _action: &Action) -> bool {
         true
     }
 }
 
 // This should also be a trait
 #[derive(PartialEq, Clone)]
-pub struct Function;
+pub struct Function(String);
 
 impl Function {
     // A function reads from and writes to a global datastore. This allows for interaction between
     // tools and capture side effects through update to the datastore.
     // Currently in this model we return an updated datastore.
     pub fn call(&self, _args: Args, _datastore: &mut Datastore) -> Message {
-        Message::Tool("I have no tools".to_string())
+        todo!()
     }
 
+    /*
     fn format_vars(&self, _variables: Vec<&Variable>) -> Self {
         todo!()
     }
+    */
 
     fn name(&self) -> &str {
         "Anonym"
     }
 }
 
+/*
 // This should also be a trait
 #[derive(PartialEq, Clone)]
 pub struct LabeledFunction {
@@ -80,14 +85,19 @@ impl LabeledFunction {
 }
 
 #[derive(Clone)]
-pub struct Args(Vec<Arg>);
+pub struct ArgsTemp(Vec<Arg>);
+*/
+
+#[derive(Clone)]
+pub struct Args(String);
 
 #[derive(Clone)]
 pub enum Arg {
     Basic(String),
-    Variable(Variable),
+    //Variable(Variable),
 }
 
+/*
 impl TryFrom<Arg> for Variable {
     type Error = ConversionError;
 
@@ -107,6 +117,7 @@ pub struct LabeledArg {
     arg: Arg,
     label: Label,
 }
+*/
 
 #[derive(Debug)]
 pub enum ConversionError {
@@ -115,13 +126,14 @@ pub enum ConversionError {
 
 pub enum Action {
     // Query the model with a specific conversation history and available tools
-    Query(ConversationHistory<Message>, Vec<Function>),
+    Query(ConversationHistory<ChatCompletionRequestMessage>, Vec<ChatCompletionTool>),
     // Call a `Tool` with `Args`
     MakeCall(Function, Args),
     // Finish the conversation and respond to the user.
     Finish(String),
 }
 
+/*
 pub enum LabeledAction<M> {
     // Query the model with a specific conversation history and available tools
     Query(LabeledConversationHistory<M>, Vec<LabeledFunction>),
@@ -130,17 +142,19 @@ pub enum LabeledAction<M> {
     // Finish the conversation and respond to the user.
     Finish(String),
 }
-
+*/
 // Comprises all the messages in the conversation up to the current point
 #[derive(Clone)]
 pub struct ConversationHistory<T>(Vec<T>);
-type State = ConversationHistory<Message>;
+type State = ConversationHistory<ChatCompletionRequestMessage>;
 
+/*
 #[derive(Clone)]
 pub struct LabeledConversationHistory<M> {
     conv: ConversationHistory<M>,
     label: Label,
 }
+*/
 
 // Model is a mapping between a sequence of messages and tool declarations to either a tool call or
 // a response. This should be a trait
@@ -149,7 +163,7 @@ pub struct Model;
 impl Model {
     pub fn map(&self, _conv_history: ConversationHistory<Message>, _tools: Vec<Function>) -> Message {
         // This should be either a tool call or an Assitant message
-        Message::Assistant("I have no idea what I am doing".to_string())
+        todo!()
     }
 }
 

@@ -1,36 +1,43 @@
 use crate::{
-    Action, Arg, Args, Datastore, Function, Label, LabeledMessage, Message, Model, Policy, State,
+    Action, Args, Datastore, Function, Message, State,
     openai::LlmClient,
 };
-use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use async_openai::types::{ChatCompletionTool, ChatCompletionRequestUserMessage,
-    ChatCompletionRequestToolMessage,
+use async_openai::{
+    types::{ChatCompletionTool, ChatCompletionRequestUserMessageArgs,
+        ChatCompletionRequestToolMessageArgs, Role, FunctionCall,
+        ChatCompletionRequestAssistantMessageArgs,
+    },
+    error::OpenAIError,
 };
 
 // Planning loop handle all interaction with the model, tools and users.
 pub struct PlanningLoop<M: Clone, P: Plan<M>> {
     planner: P,
     model: LlmClient,
-    tools: Vec<ChatCompletionTool>,
+    tools: Vec<Function>,
     phantom: PhantomData<M>,
 }
 
 impl<P: Plan<Message>> PlanningLoop<Message, P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
-    pub async fn run(&mut self, state: State, datastore: &mut Datastore, message: Message) -> String {
+    pub async fn run(
+        &mut self,
+        state: State,
+        datastore: &mut Datastore,
+        message: Message,
+    ) -> Result<String, PlanError> {
         let mut current_message = message;
         let mut current_state = state;
         loop {
             let action;
-            (current_state, action) = self.planner.plan(current_state, current_message);
+            (current_state, action) = self.planner.plan(current_state, current_message)
+                .map_err(|_| PlanError::CannotPlan)?;
             match action {
                 Action::Query(conv_history, tools) => {
-                    let messages = conv.history.into_iter().map(|f| f.into()).collect();
-                    let new_message = self.model.run_request(messages, tools);
-                    current_message = new_message;
+                    let chat_request= self.model.chat(conv_history.0, tools);
+                    current_message = chat_request.await?.choices[0].message.clone();
                 }
                 Action::MakeCall(function, args) => {
                     let tool_result = self
@@ -41,20 +48,21 @@ impl<P: Plan<Message>> PlanningLoop<Message, P> {
                         .call(args, datastore);
                     current_message = tool_result;
                 }
-                Action::Finish(result) => return result,
+                Action::Finish(result) => return Ok(result),
             }
         }
     }
 }
 
+/*
 impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
     pub fn run(
         &mut self,
-        state: State,
-        datastore: &mut Datastore,
-        message: LabeledMessage,
+        _state: State,
+        _datastore: &mut Datastore,
+        _message: LabeledMessage,
     ) -> String {
         todo!()
     }
@@ -73,12 +81,15 @@ impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
             (current_state, action) = self.planner.plan(current_state, current_message.clone());
             match action {
                 Action::Query(conv_history, tools) => {
+                    /*
                     let new_message = self.model.map(conv_history, tools);
                     // TODO: Create label for this message
                     current_message = LabeledMessage {
                         message: new_message,
                         label: Label,
                     }
+                    */
+                    todo!(),
                 }
                 Action::MakeCall(ref function, ref args) => {
                     // Here both `function` and `args` have a label
@@ -103,41 +114,83 @@ impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
         }
     }
 }
+*/
 
 // State passing planner which is plugged into the `PlanningLoop`
 pub trait Plan<M> {
-    fn plan(&mut self, state: State, message: M) -> (State, Action);
+    type Error;
+    fn plan(&mut self, state: State, message: M) -> Result<(State, Action), Self::Error>;
 }
 
 pub struct BasicPlanner {
-    tools: Vec<Function>,
+    tools: Vec<ChatCompletionTool>,
 }
 
 impl Plan<Message> for BasicPlanner {
-    fn plan(&mut self, state: State, message: Message) -> (State, Action) {
+    type Error = PlanError;
+    fn plan(&mut self, state: State, message: Message) -> Result<(State, Action), Self::Error> {
         let mut new_state = state;
-        new_state.0.push(message.clone());
-        match message {
-            Message::User(_user_message) => {
+        let role = message.role;
+        println!("Refusal {:?}", message.role);
+        let (new_state, action) = match role {
+            Role::User => {
+                let conv_message = ChatCompletionRequestUserMessageArgs::default()
+                    .content(message.content.ok_or(PlanError::NoUserContent)?).build()?.into();
+                new_state.0.push(conv_message);
                 let action = Action::Query(new_state.clone(), self.tools.clone());
                 (new_state, action)
             }
-            Message::Tool(_tool_result) => {
+            Role::Tool => {
+                let conv_message = ChatCompletionRequestToolMessageArgs::default()
+                    .content(message.content.ok_or(PlanError::NoToolContent)?).build()?.into();
+                new_state.0.push(conv_message);
                 let action = Action::Query(new_state.clone(), self.tools.clone());
                 (new_state, action)
             }
-            Message::ToolCall(tool, args) => {
-                let action = Action::MakeCall(tool, args);
-                (new_state, action)
+            Role::Assistant => {
+                if let Some(tool_calls) = message.tool_calls {
+                    let FunctionCall { name, arguments } = tool_calls[0].clone().function;
+                    let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
+                        .tool_calls(tool_calls)
+                        .build()?
+                        .into();
+                    new_state.0.push(conv_message);
+                    let action = Action::MakeCall(Function(name), Args(arguments));
+                    (new_state, action)
+                } else if let Some(content) = message.content {
+                    let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
+                        .content(content.clone())
+                        .build()?
+                        .into();
+                    new_state.0.push(conv_message);
+                    let action = Action::Finish(content);
+                    (new_state, action)
+                } else {
+                    todo!();
+                }
             }
-            Message::Assistant(response) => {
-                let action = Action::Finish(response);
-                (new_state, action)
-            }
-        }
+            _ => unimplemented!(),
+        };
+        Ok((new_state, action))
     }
 }
 
+pub enum PlanError {
+    NoUserContent,
+    NoToolContent,
+    NoToolCalls,
+    NoFunctionCall,
+    CannotPlan,
+    OpenAIError(OpenAIError),
+}
+
+impl From<OpenAIError> for PlanError {
+    fn from(err: OpenAIError) -> Self {
+        Self::OpenAIError(err)
+    }
+}
+
+/*
 pub struct VarPlanner {
     tools: Vec<Function>,
     memory: Memory,
@@ -234,3 +287,4 @@ impl Plan<LabeledMessage> for TaintTrackingPlanner {
         todo!()
     }
 }
+*/

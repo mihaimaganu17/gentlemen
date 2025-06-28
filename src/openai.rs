@@ -1,4 +1,4 @@
-use async_openai::{Client, config::OpenAIConfig, types::{CreateCompletionRequestArgs, CreateCompletionResponse, Prompt, CreateMessageRequest, AssistantTools, CreateRunRequestArgs,ChatCompletionRequestMessage, ChatCompletionTool}, error::OpenAIError};
+use async_openai::{Client, config::OpenAIConfig, types::{CreateCompletionRequestArgs, CreateChatCompletionRequestArgs, CreateCompletionResponse, Prompt, ChatCompletionRequestMessage, ChatCompletionTool, CreateChatCompletionResponse}, error::OpenAIError};
 
 pub struct LlmClient {
     client: Client<OpenAIConfig>,
@@ -32,14 +32,14 @@ impl LlmClient {
         Ok(response)
     }
 
-    pub async fn run_request<M: Into<Vec<ChatCompletionRequestMessage>>, T: Into<Vec<ChatCompletionTool>>>(
+    pub async fn chat<M: Into<Vec<ChatCompletionRequestMessage>>, T: Into<Vec<ChatCompletionTool>>>(
         &self,
         messages: M,
         tools: T,
-    ) -> Result<CreateCompletionResponse, OpenAIError> {
+    ) -> Result<CreateChatCompletionResponse, OpenAIError> {
         let model = "llama3.2";
         // Create a `CreateCompletionRequest`
-        let request = CreateRunRequestArgs::default()
+        let request = CreateChatCompletionRequestArgs::default()
             .model(model)
             .messages(messages)
             .tools(tools)
@@ -48,7 +48,7 @@ impl LlmClient {
             .build()?;
 
         let response = self.client
-            .completions()
+            .chat()
             .create(request)
             .await?;
         Ok(response)
