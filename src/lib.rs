@@ -5,6 +5,7 @@ pub mod ifc;
 pub use message::{LabeledMessage, Message};
 use plan::Variable;
 pub use plan::{Plan, PlanningLoop};
+pub use ifc::{ProductLattice, Confidentiality, Integrity};
 
 pub struct Datastore;
 
@@ -16,6 +17,8 @@ impl Datastore {
 
 #[derive(PartialEq, Clone)]
 pub struct Label;
+
+pub type Label1 = ProductLattice<Confidentiality, Integrity>;
 
 pub struct Policy;
 
@@ -156,11 +159,6 @@ pub struct Task {
     _query: String,
     _tools: Vec<Function>,
     _datastores: Vec<Datastore>,
-}
-
-enum _Integrity {
-    Trusted(_HighIntegrity),
-    Untrusted(_LowIntegrity),
 }
 
 struct _HighIntegrity;

@@ -96,12 +96,12 @@ impl Integrity {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Product<A: Lattice, B: Lattice> {
+pub struct ProductLattice<A: Lattice, B: Lattice> {
     lattice1: A,
     lattice2: B,
 }
 
-impl<A: Lattice, B: Lattice> PartialOrd for Product<A, B> {
+impl<A: Lattice, B: Lattice> PartialOrd for ProductLattice<A, B> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         let ord1 = self.lattice1.partial_cmp(&other.lattice1)?;
         let ord2 = self.lattice2.partial_cmp(&other.lattice2)?;
@@ -119,7 +119,7 @@ impl<A: Lattice, B: Lattice> PartialOrd for Product<A, B> {
     }
 }
 
-impl<A: Lattice, B: Lattice> Lattice for Product<A, B> {
+impl<A: Lattice, B: Lattice> Lattice for ProductLattice<A, B> {
     /// Returns the least upper bound between `self` and `other` values
     fn join(self, other: Self) -> Option<Self> {
         let lattice1 = self.lattice1.join(other.lattice1)?;
@@ -143,7 +143,7 @@ impl<A: Lattice, B: Lattice> Lattice for Product<A, B> {
     }
 }
 
-impl<A: Lattice, B: Lattice> Product<A, B> {
+impl<A: Lattice, B: Lattice> ProductLattice<A, B> {
     pub fn new(lattice1: A, lattice2: B) -> Self {
         Self {
             lattice1,
