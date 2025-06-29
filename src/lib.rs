@@ -2,6 +2,7 @@ pub mod ifc;
 mod message;
 pub mod openai;
 mod plan;
+pub mod email;
 
 pub use ifc::{Confidentiality, Integrity, ProductLattice};
 pub use message::{LabeledMessage, Message};
@@ -11,14 +12,6 @@ pub use plan::{Plan, PlanningLoop};
 use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
 
 pub struct Datastore;
-
-/*
-impl Datastore {
-    pub fn label(var: &Variable) -> Label {
-        Label
-    }
-}
-*/
 
 #[derive(PartialEq, Clone)]
 pub struct Label;
@@ -45,15 +38,40 @@ impl Function {
         todo!()
     }
 
-    /*
-    fn format_vars(&self, _variables: Vec<&Variable>) -> Self {
-        todo!()
-    }
-    */
-
     fn _name(&self) -> &str {
         "Anonym"
     }
+}
+
+#[derive(Clone)]
+pub struct Args(pub String);
+
+#[derive(Clone)]
+pub enum Arg {
+    Basic(String),
+    //Variable(Variable),
+}
+
+// Comprises all the messages in the conversation up to the current point
+#[derive(Clone)]
+pub struct ConversationHistory<T>(Vec<T>);
+type State = ConversationHistory<ChatCompletionRequestMessage>;
+
+#[derive(Debug)]
+pub enum ConversionError {
+    ArgIsNotVariable,
+}
+
+pub enum Action {
+    // Query the model with a specific conversation history and available tools
+    Query(
+        ConversationHistory<ChatCompletionRequestMessage>,
+        Vec<ChatCompletionTool>,
+    ),
+    // Call a `Tool` with `Args`
+    MakeCall(Function, Args),
+    // Finish the conversation and respond to the user.
+    Finish(String),
 }
 
 /*
@@ -88,15 +106,6 @@ impl LabeledFunction {
 pub struct ArgsTemp(Vec<Arg>);
 */
 
-#[derive(Clone)]
-pub struct Args(pub String);
-
-#[derive(Clone)]
-pub enum Arg {
-    Basic(String),
-    //Variable(Variable),
-}
-
 /*
 impl TryFrom<Arg> for Variable {
     type Error = ConversionError;
@@ -119,22 +128,6 @@ pub struct LabeledArg {
 }
 */
 
-#[derive(Debug)]
-pub enum ConversionError {
-    ArgIsNotVariable,
-}
-
-pub enum Action {
-    // Query the model with a specific conversation history and available tools
-    Query(
-        ConversationHistory<ChatCompletionRequestMessage>,
-        Vec<ChatCompletionTool>,
-    ),
-    // Call a `Tool` with `Args`
-    MakeCall(Function, Args),
-    // Finish the conversation and respond to the user.
-    Finish(String),
-}
 
 /*
 pub enum LabeledAction<M> {
@@ -146,10 +139,6 @@ pub enum LabeledAction<M> {
     Finish(String),
 }
 */
-// Comprises all the messages in the conversation up to the current point
-#[derive(Clone)]
-pub struct ConversationHistory<T>(Vec<T>);
-type State = ConversationHistory<ChatCompletionRequestMessage>;
 
 /*
 #[derive(Clone)]
@@ -157,7 +146,6 @@ pub struct LabeledConversationHistory<M> {
     conv: ConversationHistory<M>,
     label: Label,
 }
-*/
 
 // Model is a mapping between a sequence of messages and tool declarations to either a tool call or
 // a response. This should be a trait
@@ -173,6 +161,7 @@ impl Model {
         todo!()
     }
 }
+*/
 
 pub enum TaskType {
     DataDependent,
