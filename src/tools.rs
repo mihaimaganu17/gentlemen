@@ -1,4 +1,5 @@
-use serde::Deserialize;
+use serde::{de, Deserialize, Deserializer};
+use serde_json::Value;
 
 #[derive(Clone, Debug)]
 pub struct Email {
@@ -72,7 +73,18 @@ const INBOX: [Email; 5] = [
 #[derive(Deserialize)]
 pub struct ReadEmailsArgs {
     // Number of emails to read
+    #[serde(deserialize_with="ReadEmailsArgs::de_ser")]
     count: usize,
+}
+
+impl ReadEmailsArgs {
+    pub fn de_ser<'de, D: Deserializer<'de>>(deserializer: D) -> Result<usize, D::Error> {
+        Ok(match Value::deserialize(deserializer)? {
+            Value::String(s) => s.parse().map_err(de::Error::custom)?,
+            Value::Number(num) => num.as_u64().ok_or(de::Error::custom("Invalid number"))? as usize,
+            _ => return Err(de::Error::custom("wrong type"))
+        })
+    }
 }
 
 // Represents a list of arguments to be passed for reading emails
