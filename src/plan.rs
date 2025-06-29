@@ -139,7 +139,7 @@ impl Plan<Message> for BasicPlanner {
     fn plan(&mut self, state: State, message: Message) -> Result<(State, Action), Self::Error> {
         let mut new_state = state;
         let role = message.role;
-        println!("Refusal {:?}", message.role);
+        println!("Refusal {:#?}", message);
         let (new_state, action) = match role {
             Role::User => {
                 let conv_message = ChatCompletionRequestUserMessageArgs::default()
@@ -187,6 +187,7 @@ impl Plan<Message> for BasicPlanner {
     }
 }
 
+#[derive(Debug)]
 pub enum PlanError {
     NoUserContent,
     NoToolContent,

@@ -67,7 +67,7 @@ impl LlmClient {
 mod tests {
     use super::*;
 
-    #[tokio::test]
+    // #[tokio::test]
     async fn openai_local_llama32_demo() {
         let api_key = ""; //env!("OPENAI_API_KEY");
         let api_base = "http://localhost:11434/v1";
@@ -120,12 +120,6 @@ mod tests {
         let client = LlmClient::new(api_key, api_base);
 
 
-        let planning_loop = PlanningLoop::new(
-            basic_planner,
-            client,
-            vec![Function("read_emails".to_string())]
-        );
-
         // Build a system message
         let system_request = ChatCompletionRequestSystemMessageArgs::default()
             .content(system_message)
@@ -135,6 +129,16 @@ mod tests {
             .build().unwrap().into();
 
         let state: crate::State = ConversationHistory(vec![system_request, user_message]);
+        let chat_request = client.chat(state.0.clone(), vec![]);
+        let current_message = chat_request.await.unwrap().choices[0].message.clone();
 
+        let mut planning_loop = PlanningLoop::new(
+            basic_planner,
+            client,
+            vec![Function("read_emails".to_string())]
+        );
+
+        let mut datastore = crate::Datastore;
+        planning_loop.run(state, &mut datastore, current_message).await.expect("Failed to run");
     }
 }
