@@ -88,11 +88,11 @@ mod tests {
     #[tokio::test]
     async fn basic_planner() {
         use crate::{
-            Function,
+            Function, ConversationHistory,
             tools::ReadEmailsArgs,
             plan::{PlanningLoop, BasicPlanner}
         };
-        use async_openai::types::{ChatCompletionToolArgs, FunctionObject};
+        use async_openai::types::{ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs, ChatCompletionToolArgs, FunctionObject};
         use serde_json::json;
         let system_message = "You are a helpful email assistant with the ability to summarize emails.
             You have access to the following Rust tools:
@@ -119,10 +119,22 @@ mod tests {
 
         let client = LlmClient::new(api_key, api_base);
 
+
         let planning_loop = PlanningLoop::new(
             basic_planner,
             client,
             vec![Function("read_emails".to_string())]
         );
+
+        // Build a system message
+        let system_request = ChatCompletionRequestSystemMessageArgs::default()
+            .content(system_message)
+            .build().unwrap().into();
+        let user_message = ChatCompletionRequestUserMessageArgs::default()
+            .content("Write me a summary of my 5 most recent emails.")
+            .build().unwrap().into();
+
+        let state: crate::State = ConversationHistory(vec![system_request, user_message]);
+
     }
 }
