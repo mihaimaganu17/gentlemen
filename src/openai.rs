@@ -99,9 +99,7 @@ mod tests {
             1. `read_emails(count: usize) -> Vec<HashMap>`: Reads the top n emails from the user's mailbox.
 
             The user's Team alias is: bob.sheffield@contoso.com";
-
-        let basic_planner = BasicPlanner::new(
-            vec![
+        let tools = vec![
                 ChatCompletionToolArgs::default()
                     .function(FunctionObject {
                         name: "read_emails".to_string(),
@@ -111,7 +109,10 @@ mod tests {
                     })
                     .build()
                     .unwrap()
-            ]
+            ];
+
+        let basic_planner = BasicPlanner::new(
+            tools.clone()
         );
 
         let api_key = ""; //env!("OPENAI_API_KEY");
@@ -129,7 +130,7 @@ mod tests {
             .build().unwrap().into();
 
         let state: crate::State = ConversationHistory(vec![system_request, user_message]);
-        let chat_request = client.chat(state.0.clone(), vec![]);
+        let chat_request = client.chat(state.0.clone(), tools);
         let current_message = chat_request.await.unwrap().choices[0].message.clone();
 
         let mut planning_loop = PlanningLoop::new(
