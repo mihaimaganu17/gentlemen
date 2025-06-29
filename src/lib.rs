@@ -44,6 +44,7 @@ impl Function {
                 println!("{result:?}");
                 serde_json::to_string(&result).unwrap()
             }
+            "send_slack_message" => panic!("{:?}", self.0),
             _ => panic!("{:?}", self.0),
         }
     }

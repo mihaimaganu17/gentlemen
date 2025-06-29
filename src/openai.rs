@@ -97,7 +97,7 @@ mod tests {
             ChatCompletionToolArgs, FunctionObject,
         };
         use serde_json::json;
-        let system_message = "You are a helpful email assistant with the ability to summarize emails and send Slack messages.
+        let system_message = "You are a helpful email assistant with the ability to summarize emails and to send Slack messages.
             You have access to the following Rust tools:
             1. `read_emails(count: usize) -> Vec<HashMap>`: Reads the top n emails from the user's mailbox.
             2. `send_slack_message(channel: String, message: String, link_previews: bool) -> String`: Sends a message to a Slack channel.
@@ -159,9 +159,10 @@ mod tests {
         );
 
         let mut datastore = crate::Datastore;
-        planning_loop
+        let response = planning_loop
             .run(state, &mut datastore, crate::Message::Chat(current_message))
             .await
             .expect("Failed to run");
+        println!("{response:#?}");
     }
 }
