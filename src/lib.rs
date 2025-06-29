@@ -35,17 +35,17 @@ impl Function {
     // A function reads from and writes to a global datastore. This allows for interaction between
     // tools and capture side effects through update to the datastore.
     // Currently in this model we return an updated datastore.
-    pub fn call(&self, args: Args, _datastore: &mut Datastore) -> Message {
+    pub fn call(&self, args: Args, _datastore: &mut Datastore) -> String {
         match self.0.as_str() {
             "read_emails" => {
                 // Convert args to desired type
                 let args: ReadEmailsArgs = serde_json::from_str(&args.0).unwrap();
                 let result = read_emails(args);
                 println!("{result:?}");
+                serde_json::to_string(&result).unwrap()
             }
-            _ => println!("{:?}", self.0),
+            _ => panic!("{:?}", self.0),
         }
-        todo!()
     }
 
     fn _name(&self) -> &str {

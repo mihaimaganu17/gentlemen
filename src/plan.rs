@@ -44,7 +44,7 @@ impl<P: Plan<Message>> PlanningLoop<Message, P> {
             match action {
                 Action::Query(conv_history, tools) => {
                     let chat_request = self.model.chat(conv_history.0, tools);
-                    current_message = chat_request.await?.choices[0].message.clone();
+                    current_message = Message::Chat(chat_request.await?.choices[0].message.clone());
                 }
                 Action::MakeCall(function, args) => {
                     let tool_result = self
@@ -53,11 +53,110 @@ impl<P: Plan<Message>> PlanningLoop<Message, P> {
                         .find(|&f| f == &function)
                         .unwrap()
                         .call(args, datastore);
-                    current_message = tool_result;
+                    current_message = Message::ToolResult(tool_result);
                 }
                 Action::Finish(result) => return Ok(result),
             }
         }
+    }
+}
+
+
+// State passing planner which is plugged into the `PlanningLoop`
+pub trait Plan<M> {
+    type Error;
+    fn plan(&mut self, state: State, message: M) -> Result<(State, Action), Self::Error>;
+}
+
+pub struct BasicPlanner {
+    tools: Vec<ChatCompletionTool>,
+}
+
+impl BasicPlanner {
+    pub fn new(tools: Vec<ChatCompletionTool>) -> Self {
+        Self { tools }
+    }
+}
+
+impl Plan<Message> for BasicPlanner {
+    type Error = PlanError;
+    fn plan(&mut self, state: State, message: Message) -> Result<(State, Action), Self::Error> {
+        let mut new_state = state;
+        let (new_state, action) = match message {
+            Message::Chat(message) => {
+                let role = message.role;
+                println!("Refusal {:#?}", message);
+                match role {
+                    Role::User => {
+                        let conv_message = ChatCompletionRequestUserMessageArgs::default()
+                            .content(message.content.ok_or(PlanError::NoUserContent)?)
+                            .build()?
+                            .into();
+                        new_state.0.push(conv_message);
+                        let action = Action::Query(new_state.clone(), self.tools.clone());
+                        (new_state, action)
+                    }
+                    Role::Tool => {
+                        let conv_message = ChatCompletionRequestToolMessageArgs::default()
+                            .content(message.content.ok_or(PlanError::NoToolContent)?)
+                            .build()?
+                            .into();
+                        new_state.0.push(conv_message);
+                        let action = Action::Query(new_state.clone(), self.tools.clone());
+                        (new_state, action)
+                    }
+                    Role::Assistant => {
+                        if let Some(tool_calls) = message.tool_calls {
+                            let FunctionCall { name, arguments } = tool_calls[0].clone().function;
+                            let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
+                                .tool_calls(tool_calls)
+                                .build()?
+                                .into();
+                            new_state.0.push(conv_message);
+                            let action = Action::MakeCall(Function(name), Args(arguments));
+                            (new_state, action)
+                        } else if let Some(content) = message.content {
+                            let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
+                                .content(content.clone())
+                                .build()?
+                                .into();
+                            new_state.0.push(conv_message);
+                            let action = Action::Finish(content);
+                            (new_state, action)
+                        } else {
+                            todo!();
+                        }
+                    }
+                    _ => unimplemented!(),
+                }
+            }
+            Message::ToolResult(content) => {
+                let conv_message = ChatCompletionRequestToolMessageArgs::default()
+                    .content(content)
+                    .build()?
+                    .into();
+                new_state.0.push(conv_message);
+                let action = Action::Query(new_state.clone(), self.tools.clone());
+                (new_state, action)
+            }
+        };
+        Ok((new_state, action))
+    }
+}
+
+#[derive(Debug)]
+pub enum PlanError {
+    NoUserContent,
+    NoToolContent,
+    NoToolCalls,
+    NoFunctionCall,
+    CannotPlan,
+    OpenAIError(OpenAIError),
+}
+
+impl From<OpenAIError> for PlanError {
+    fn from(err: OpenAIError) -> Self {
+        Self::OpenAIError(err)
     }
 }
 
@@ -122,91 +221,6 @@ impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
     }
 }
 */
-
-// State passing planner which is plugged into the `PlanningLoop`
-pub trait Plan<M> {
-    type Error;
-    fn plan(&mut self, state: State, message: M) -> Result<(State, Action), Self::Error>;
-}
-
-pub struct BasicPlanner {
-    tools: Vec<ChatCompletionTool>,
-}
-
-impl BasicPlanner {
-    pub fn new(tools: Vec<ChatCompletionTool>) -> Self {
-        Self { tools }
-    }
-}
-
-impl Plan<Message> for BasicPlanner {
-    type Error = PlanError;
-    fn plan(&mut self, state: State, message: Message) -> Result<(State, Action), Self::Error> {
-        let mut new_state = state;
-        let role = message.role;
-        println!("Refusal {:#?}", message);
-        let (new_state, action) = match role {
-            Role::User => {
-                let conv_message = ChatCompletionRequestUserMessageArgs::default()
-                    .content(message.content.ok_or(PlanError::NoUserContent)?)
-                    .build()?
-                    .into();
-                new_state.0.push(conv_message);
-                let action = Action::Query(new_state.clone(), self.tools.clone());
-                (new_state, action)
-            }
-            Role::Tool => {
-                let conv_message = ChatCompletionRequestToolMessageArgs::default()
-                    .content(message.content.ok_or(PlanError::NoToolContent)?)
-                    .build()?
-                    .into();
-                new_state.0.push(conv_message);
-                let action = Action::Query(new_state.clone(), self.tools.clone());
-                (new_state, action)
-            }
-            Role::Assistant => {
-                if let Some(tool_calls) = message.tool_calls {
-                    let FunctionCall { name, arguments } = tool_calls[0].clone().function;
-                    let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
-                        .tool_calls(tool_calls)
-                        .build()?
-                        .into();
-                    new_state.0.push(conv_message);
-                    let action = Action::MakeCall(Function(name), Args(arguments));
-                    (new_state, action)
-                } else if let Some(content) = message.content {
-                    let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
-                        .content(content.clone())
-                        .build()?
-                        .into();
-                    new_state.0.push(conv_message);
-                    let action = Action::Finish(content);
-                    (new_state, action)
-                } else {
-                    todo!();
-                }
-            }
-            _ => unimplemented!(),
-        };
-        Ok((new_state, action))
-    }
-}
-
-#[derive(Debug)]
-pub enum PlanError {
-    NoUserContent,
-    NoToolContent,
-    NoToolCalls,
-    NoFunctionCall,
-    CannotPlan,
-    OpenAIError(OpenAIError),
-}
-
-impl From<OpenAIError> for PlanError {
-    fn from(err: OpenAIError) -> Self {
-        Self::OpenAIError(err)
-    }
-}
 
 /*
 pub struct VarPlanner {

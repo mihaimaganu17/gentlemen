@@ -1,7 +1,7 @@
-use serde::{Deserialize, Deserializer, de};
+use serde::{Serialize, Deserialize, Deserializer, de};
 use serde_json::Value;
 
-#[derive(Clone, Debug)]
+#[derive(Serialize, Clone, Debug)]
 pub struct Email {
     sender: &'static str,
     receiver: &'static str,
@@ -103,16 +103,16 @@ impl ReadEmailsArgs {
 }
 
 // Represents a list of arguments to be passed for reading emails
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
 pub struct ReadEmailsResults {
     // Number of emails to read
-    _emails: Vec<Email>,
+    emails: Vec<Email>,
 }
 
 pub fn read_emails(args: ReadEmailsArgs) -> ReadEmailsResults {
     let count = std::cmp::min(args.count, INBOX.len());
     ReadEmailsResults {
-        _emails: INBOX[0..count].to_vec(),
+        emails: INBOX[0..count].to_vec(),
     }
 }
 

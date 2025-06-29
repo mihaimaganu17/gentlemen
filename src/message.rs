@@ -15,7 +15,11 @@ pub enum _Message1 {
 }
 
 // A message passed as information in the planner
-pub type Message = ChatCompletionResponseMessage;
+#[derive(Clone)]
+pub enum Message {
+    Chat(ChatCompletionResponseMessage),
+    ToolResult(String),
+}
 
 #[derive(Clone)]
 pub struct LabeledMessage {

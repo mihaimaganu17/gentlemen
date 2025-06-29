@@ -147,7 +147,7 @@ mod tests {
 
         let mut datastore = crate::Datastore;
         planning_loop
-            .run(state, &mut datastore, current_message)
+            .run(state, &mut datastore, crate::Message::Chat(current_message))
             .await
             .expect("Failed to run");
     }
