@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct Email {
     sender: &'static str,
     receiver: &'static str,
@@ -5,7 +6,7 @@ pub struct Email {
     body: &'static str,
 }
 
-const EMAIL_LIST: [Email; 5] = [
+const INBOX: [Email; 5] = [
     Email {
         sender: "alice.hudson@contoso.com",
         receiver: "bob.sheffield@contoso.com",
@@ -64,3 +65,40 @@ const EMAIL_LIST: [Email; 5] = [
         ,
     }
 ];
+
+// Represents a list of arguments to be passed for reading emails
+pub struct ReadEmailsArgs {
+    // Number of emails to read
+    count: usize,
+}
+
+// Represents a list of arguments to be passed for reading emails
+pub struct ReadEmailsResults {
+    // Number of emails to read
+    emails: Vec<Email>,
+}
+
+pub fn read_emails(args: ReadEmailsArgs) -> ReadEmailsResults {
+    let count = std::cmp::min(args.count, INBOX.len());
+    ReadEmailsResults { emails: INBOX[0..count].to_vec() }
+}
+
+pub struct SendSlackMessageArgs {
+    // The name of identifier of the Slack channel
+    channel: String,
+    // The message to be sent to the channel
+    message: String,
+    // Whether to enable link previous
+    link_previous: bool,
+}
+
+pub struct SendSlackMessageResult {
+    // The success or failure status of the message sending
+    status: String,
+}
+
+pub fn send_slack_message(args: SendSlackMessageArgs) -> SendSlackMessageResult {
+    println!("Sending {0} to {1} channel", args.message, args.channel);
+    SendSlackMessageResult { status: "Message sent!".to_string() }
+}
+

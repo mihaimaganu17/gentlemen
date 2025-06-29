@@ -2,7 +2,7 @@ pub mod ifc;
 mod message;
 pub mod openai;
 mod plan;
-pub mod email;
+pub mod tools;
 
 pub use ifc::{Confidentiality, Integrity, ProductLattice};
 pub use message::{LabeledMessage, Message};
