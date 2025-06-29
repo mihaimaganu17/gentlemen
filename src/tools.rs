@@ -116,6 +116,7 @@ pub fn read_emails(args: ReadEmailsArgs) -> ReadEmailsResults {
     }
 }
 
+#[derive(Deserialize, Clone, Debug)]
 pub struct SendSlackMessageArgs {
     // The name of identifier of the Slack channel
     channel: String,
@@ -125,6 +126,7 @@ pub struct SendSlackMessageArgs {
     preview: bool,
 }
 
+#[derive(Serialize, Debug)]
 pub struct SendSlackMessageResult {
     // The success or failure status of the message sending
     _status: String,

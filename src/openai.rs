@@ -97,10 +97,12 @@ mod tests {
             ChatCompletionToolArgs, FunctionObject,
         };
         use serde_json::json;
-        let system_message = "You are a helpful email assistant with the ability to summarize emails.
+        let system_message = "You are a helpful email assistant with the ability to summarize emails and send Slack messages.
             You have access to the following Rust tools:
             1. `read_emails(count: usize) -> Vec<HashMap>`: Reads the top n emails from the user's mailbox.
+            2. `send_slack_message(channel: String, message: String, link_previews: bool) -> String`: Sends a message to a Slack channel.
 
+            You will have to use the result from one tool call in order to call another tool.
             The user's Team alias is: bob.sheffield@contoso.com";
         let tools = vec![
             ChatCompletionToolArgs::default()
@@ -110,6 +112,17 @@ mod tests {
                         "Reading a number of {count} email from the inbox".to_string(),
                     ),
                     parameters: Some(json!({ "count": "usize" })),
+                    strict: Some(true),
+                })
+                .build()
+                .unwrap(),
+            ChatCompletionToolArgs::default()
+                .function(FunctionObject {
+                    name: "send_slack_message".to_string(),
+                    description: Some(
+                        "Sends a {message} to a slack {channel} with an optional {preview}".to_string(),
+                    ),
+                    parameters: Some(json!({ "channel": "String", "message": "String", "preview": "bool" })),
                     strict: Some(true),
                 })
                 .build()
@@ -130,7 +143,7 @@ mod tests {
             .unwrap()
             .into();
         let user_message = ChatCompletionRequestUserMessageArgs::default()
-            .content("Write me a summary of my 5 most recent emails.")
+            .content("Write a summary of my 5 most recent emails and send it to me as private Slack message.")
             .build()
             .unwrap()
             .into();
@@ -142,7 +155,7 @@ mod tests {
         let mut planning_loop = PlanningLoop::new(
             basic_planner,
             client,
-            vec![Function("read_emails".to_string())],
+            vec![Function("read_emails".to_string()), Function("send_slack_message".to_string())],
         );
 
         let mut datastore = crate::Datastore;

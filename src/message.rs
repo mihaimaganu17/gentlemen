@@ -18,7 +18,7 @@ pub enum _Message1 {
 #[derive(Clone)]
 pub enum Message {
     Chat(ChatCompletionResponseMessage),
-    ToolResult(String),
+    ToolResult(String, String),
 }
 
 #[derive(Clone)]

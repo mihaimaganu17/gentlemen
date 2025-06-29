@@ -46,14 +46,14 @@ impl<P: Plan<Message>> PlanningLoop<Message, P> {
                     let chat_request = self.model.chat(conv_history.0, tools);
                     current_message = Message::Chat(chat_request.await?.choices[0].message.clone());
                 }
-                Action::MakeCall(function, args) => {
+                Action::MakeCall(function, args, id) => {
                     let tool_result = self
                         .tools
                         .iter()
                         .find(|&f| f == &function)
                         .unwrap()
                         .call(args, datastore);
-                    current_message = Message::ToolResult(tool_result);
+                    current_message = Message::ToolResult(tool_result, id);
                 }
                 Action::Finish(result) => return Ok(result),
             }
@@ -99,6 +99,7 @@ impl Plan<Message> for BasicPlanner {
                     Role::Tool => {
                         let conv_message = ChatCompletionRequestToolMessageArgs::default()
                             .content(message.content.ok_or(PlanError::NoToolContent)?)
+                            .tool_call_id(message.tool_calls.unwrap()[0].id.clone())
                             .build()?
                             .into();
                         new_state.0.push(conv_message);
@@ -109,11 +110,11 @@ impl Plan<Message> for BasicPlanner {
                         if let Some(tool_calls) = message.tool_calls {
                             let FunctionCall { name, arguments } = tool_calls[0].clone().function;
                             let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
-                                .tool_calls(tool_calls)
+                                .tool_calls(tool_calls.clone())
                                 .build()?
                                 .into();
                             new_state.0.push(conv_message);
-                            let action = Action::MakeCall(Function(name), Args(arguments));
+                            let action = Action::MakeCall(Function(name), Args(arguments), tool_calls[0].clone().id);
                             (new_state, action)
                         } else if let Some(content) = message.content {
                             let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
@@ -130,9 +131,10 @@ impl Plan<Message> for BasicPlanner {
                     _ => unimplemented!(),
                 }
             }
-            Message::ToolResult(content) => {
+            Message::ToolResult(content, id) => {
                 let conv_message = ChatCompletionRequestToolMessageArgs::default()
                     .content(content)
+                    .tool_call_id(id)
                     .build()?
                     .into();
                 new_state.0.push(conv_message);
@@ -140,6 +142,7 @@ impl Plan<Message> for BasicPlanner {
                 (new_state, action)
             }
         };
+        println!("New state {:#?}", new_state.0);
         Ok((new_state, action))
     }
 }

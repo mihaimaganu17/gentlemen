@@ -79,7 +79,7 @@ pub enum Action {
         Vec<ChatCompletionTool>,
     ),
     // Call a `Tool` with `Args`
-    MakeCall(Function, Args),
+    MakeCall(Function, Args, String),
     // Finish the conversation and respond to the user.
     Finish(String),
 }
