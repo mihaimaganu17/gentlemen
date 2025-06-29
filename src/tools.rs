@@ -9,6 +9,21 @@ pub struct Email {
     body: &'static str,
 }
 
+impl Email {
+    pub fn sender(&self) -> &str {
+        self.sender
+    }
+    pub fn receiver(&self) -> &str {
+        self.receiver
+    }
+    pub fn subject(&self) -> &str {
+        self.subject
+    }
+    pub fn body(&self) -> &str {
+        self.body
+    }
+}
+
 const INBOX: [Email; 5] = [
     Email {
         sender: "alice.hudson@contoso.com",
@@ -91,13 +106,13 @@ impl ReadEmailsArgs {
 #[derive(Debug)]
 pub struct ReadEmailsResults {
     // Number of emails to read
-    emails: Vec<Email>,
+    _emails: Vec<Email>,
 }
 
 pub fn read_emails(args: ReadEmailsArgs) -> ReadEmailsResults {
     let count = std::cmp::min(args.count, INBOX.len());
     ReadEmailsResults {
-        emails: INBOX[0..count].to_vec(),
+        _emails: INBOX[0..count].to_vec(),
     }
 }
 
@@ -107,17 +122,17 @@ pub struct SendSlackMessageArgs {
     // The message to be sent to the channel
     message: String,
     // Whether to enable link previous
-    link_previous: bool,
+    preview: bool,
 }
 
 pub struct SendSlackMessageResult {
     // The success or failure status of the message sending
-    status: String,
+    _status: String,
 }
 
 pub fn send_slack_message(args: SendSlackMessageArgs) -> SendSlackMessageResult {
-    println!("Sending {0} to {1} channel", args.message, args.channel);
+    println!("Sending {0} to {1} channel {2} preview", args.message, args.channel, if args.preview { "with" } else { "without" });
     SendSlackMessageResult {
-        status: "Message sent!".to_string(),
+        _status: "Message sent!".to_string(),
     }
 }

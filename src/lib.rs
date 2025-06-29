@@ -6,7 +6,7 @@ pub mod tools;
 
 pub use ifc::{Confidentiality, Integrity, ProductLattice};
 pub use message::{LabeledMessage, Message};
-pub use plan::{Plan, PlanningLoop};
+pub use plan::{Plan, PlanningLoop, BasicPlanner};
 use tools::{ReadEmailsArgs, read_emails};
 
 // use plan::Variable;
