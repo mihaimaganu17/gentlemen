@@ -88,11 +88,14 @@ mod tests {
     #[tokio::test]
     async fn basic_planner() {
         use crate::{
-            Function, ConversationHistory,
+            ConversationHistory, Function,
+            plan::{BasicPlanner, PlanningLoop},
             tools::ReadEmailsArgs,
-            plan::{PlanningLoop, BasicPlanner}
         };
-        use async_openai::types::{ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs, ChatCompletionToolArgs, FunctionObject};
+        use async_openai::types::{
+            ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
+            ChatCompletionToolArgs, FunctionObject,
+        };
         use serde_json::json;
         let system_message = "You are a helpful email assistant with the ability to summarize emails.
             You have access to the following Rust tools:
@@ -100,34 +103,37 @@ mod tests {
 
             The user's Team alias is: bob.sheffield@contoso.com";
         let tools = vec![
-                ChatCompletionToolArgs::default()
-                    .function(FunctionObject {
-                        name: "read_emails".to_string(),
-                        description: Some("Reading a number of {count} email from the inbox".to_string()),
-                        parameters: Some(json!({ "count": "usize" })),
-                        strict: Some(true),
-                    })
-                    .build()
-                    .unwrap()
-            ];
+            ChatCompletionToolArgs::default()
+                .function(FunctionObject {
+                    name: "read_emails".to_string(),
+                    description: Some(
+                        "Reading a number of {count} email from the inbox".to_string(),
+                    ),
+                    parameters: Some(json!({ "count": "usize" })),
+                    strict: Some(true),
+                })
+                .build()
+                .unwrap(),
+        ];
 
-        let basic_planner = BasicPlanner::new(
-            tools.clone()
-        );
+        let basic_planner = BasicPlanner::new(tools.clone());
 
         let api_key = ""; //env!("OPENAI_API_KEY");
         let api_base = "http://localhost:11434/v1";
 
         let client = LlmClient::new(api_key, api_base);
 
-
         // Build a system message
         let system_request = ChatCompletionRequestSystemMessageArgs::default()
             .content(system_message)
-            .build().unwrap().into();
+            .build()
+            .unwrap()
+            .into();
         let user_message = ChatCompletionRequestUserMessageArgs::default()
             .content("Write me a summary of my 5 most recent emails.")
-            .build().unwrap().into();
+            .build()
+            .unwrap()
+            .into();
 
         let state: crate::State = ConversationHistory(vec![system_request, user_message]);
         let chat_request = client.chat(state.0.clone(), tools);
@@ -136,10 +142,13 @@ mod tests {
         let mut planning_loop = PlanningLoop::new(
             basic_planner,
             client,
-            vec![Function("read_emails".to_string())]
+            vec![Function("read_emails".to_string())],
         );
 
         let mut datastore = crate::Datastore;
-        planning_loop.run(state, &mut datastore, current_message).await.expect("Failed to run");
+        planning_loop
+            .run(state, &mut datastore, current_message)
+            .await
+            .expect("Failed to run");
     }
 }

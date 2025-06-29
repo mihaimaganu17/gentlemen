@@ -7,7 +7,7 @@ pub mod tools;
 pub use ifc::{Confidentiality, Integrity, ProductLattice};
 pub use message::{LabeledMessage, Message};
 pub use plan::{Plan, PlanningLoop};
-use tools::{read_emails, ReadEmailsArgs};
+use tools::{ReadEmailsArgs, read_emails};
 
 // use plan::Variable;
 use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
@@ -43,7 +43,7 @@ impl Function {
                 let result = read_emails(args);
                 println!("{result:?}");
             }
-            _ => println!("{:?}", self.0)
+            _ => println!("{:?}", self.0),
         }
         todo!()
     }
@@ -137,7 +137,6 @@ pub struct LabeledArg {
     label: Label,
 }
 */
-
 
 /*
 pub enum LabeledAction<M> {

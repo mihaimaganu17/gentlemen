@@ -1,4 +1,4 @@
-use serde::{de, Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, de};
 use serde_json::Value;
 
 #[derive(Clone, Debug)]
@@ -73,7 +73,7 @@ const INBOX: [Email; 5] = [
 #[derive(Deserialize)]
 pub struct ReadEmailsArgs {
     // Number of emails to read
-    #[serde(deserialize_with="ReadEmailsArgs::de_ser")]
+    #[serde(deserialize_with = "ReadEmailsArgs::de_ser")]
     count: usize,
 }
 
@@ -82,7 +82,7 @@ impl ReadEmailsArgs {
         Ok(match Value::deserialize(deserializer)? {
             Value::String(s) => s.parse().map_err(de::Error::custom)?,
             Value::Number(num) => num.as_u64().ok_or(de::Error::custom("Invalid number"))? as usize,
-            _ => return Err(de::Error::custom("wrong type"))
+            _ => return Err(de::Error::custom("wrong type")),
         })
     }
 }
@@ -96,7 +96,9 @@ pub struct ReadEmailsResults {
 
 pub fn read_emails(args: ReadEmailsArgs) -> ReadEmailsResults {
     let count = std::cmp::min(args.count, INBOX.len());
-    ReadEmailsResults { emails: INBOX[0..count].to_vec() }
+    ReadEmailsResults {
+        emails: INBOX[0..count].to_vec(),
+    }
 }
 
 pub struct SendSlackMessageArgs {
@@ -115,6 +117,7 @@ pub struct SendSlackMessageResult {
 
 pub fn send_slack_message(args: SendSlackMessageArgs) -> SendSlackMessageResult {
     println!("Sending {0} to {1} channel", args.message, args.channel);
-    SendSlackMessageResult { status: "Message sent!".to_string() }
+    SendSlackMessageResult {
+        status: "Message sent!".to_string(),
+    }
 }
-

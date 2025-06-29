@@ -18,7 +18,12 @@ pub struct PlanningLoop<M: Clone, P: Plan<M>> {
 
 impl<P: Plan<Message>> PlanningLoop<Message, P> {
     pub fn new(planner: P, model: LlmClient, tools: Vec<Function>) -> Self {
-        Self { planner, model, tools, phantom: PhantomData }
+        Self {
+            planner,
+            model,
+            tools,
+            phantom: PhantomData,
+        }
     }
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
