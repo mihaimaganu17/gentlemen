@@ -347,6 +347,8 @@ name = "gentlemen"
 version = "0.1.0"
 dependencies = [
  "async-openai",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 

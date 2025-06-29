@@ -84,4 +84,45 @@ mod tests {
 
         println!("{}", response.choices.first().unwrap().text);
     }
+
+    #[tokio::test]
+    async fn basic_planner() {
+        use crate::{
+            Function,
+            tools::ReadEmailsArgs,
+            plan::{PlanningLoop, BasicPlanner}
+        };
+        use async_openai::types::{ChatCompletionToolArgs, FunctionObject};
+        use serde_json::json;
+        let system_message = "You are a helpful email assistant with the ability to summarize emails.
+            You have access to the following Rust tools:
+            1. `read_emails(count: usize) -> Vec<HashMap>`: Reads the top n emails from the user's mailbox.
+
+            The user's Team alias is: bob.sheffield@contoso.com";
+
+        let basic_planner = BasicPlanner::new(
+            vec![
+                ChatCompletionToolArgs::default()
+                    .function(FunctionObject {
+                        name: "read_emails".to_string(),
+                        description: Some("Reading a number of {count} email from the inbox".to_string()),
+                        parameters: Some(json!({ "count": "usize" })),
+                        strict: Some(true),
+                    })
+                    .build()
+                    .unwrap()
+            ]
+        );
+
+        let api_key = ""; //env!("OPENAI_API_KEY");
+        let api_base = "http://localhost:11434/v1";
+
+        let client = LlmClient::new(api_key, api_base);
+
+        let planning_loop = PlanningLoop::new(
+            basic_planner,
+            client,
+            vec![Function("read_emails".to_string())]
+        );
+    }
 }

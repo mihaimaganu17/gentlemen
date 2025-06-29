@@ -7,6 +7,7 @@ pub mod tools;
 pub use ifc::{Confidentiality, Integrity, ProductLattice};
 pub use message::{LabeledMessage, Message};
 pub use plan::{Plan, PlanningLoop};
+use tools::{read_emails, ReadEmailsArgs};
 
 // use plan::Variable;
 use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
@@ -34,7 +35,16 @@ impl Function {
     // A function reads from and writes to a global datastore. This allows for interaction between
     // tools and capture side effects through update to the datastore.
     // Currently in this model we return an updated datastore.
-    pub fn call(&self, _args: Args, _datastore: &mut Datastore) -> Message {
+    pub fn call(&self, args: Args, _datastore: &mut Datastore) -> Message {
+        match self.0.as_str() {
+            "read_emails" => {
+                // Convert args to desired type
+                let args: ReadEmailsArgs = serde_json::from_str(&args.0).unwrap();
+                let result = read_emails(args);
+                println!("{result:?}");
+            }
+            _ => println!("{:?}", self.0)
+        }
         todo!()
     }
 

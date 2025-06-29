@@ -1,4 +1,6 @@
-#[derive(Clone)]
+use serde::Deserialize;
+
+#[derive(Clone, Debug)]
 pub struct Email {
     sender: &'static str,
     receiver: &'static str,
@@ -67,12 +69,14 @@ const INBOX: [Email; 5] = [
 ];
 
 // Represents a list of arguments to be passed for reading emails
+#[derive(Deserialize)]
 pub struct ReadEmailsArgs {
     // Number of emails to read
     count: usize,
 }
 
 // Represents a list of arguments to be passed for reading emails
+#[derive(Debug)]
 pub struct ReadEmailsResults {
     // Number of emails to read
     emails: Vec<Email>,
