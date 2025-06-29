@@ -110,7 +110,7 @@ impl Plan<Message> for BasicPlanner {
                         if let Some(tool_calls) = message.tool_calls {
                             let FunctionCall { name, arguments } = tool_calls[0].clone().function;
                             let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
-                                .tool_calls(tool_calls.clone())
+                                .tool_calls(vec![tool_calls[0].clone()])
                                 .build()?
                                 .into();
                             new_state.0.push(conv_message);

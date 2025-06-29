@@ -48,7 +48,7 @@ impl LlmClient {
         messages: M,
         tools: T,
     ) -> Result<CreateChatCompletionResponse, OpenAIError> {
-        let model = "llama3.2";
+        let model = "llama3.1";
         // Create a `CreateCompletionRequest`
         let request = CreateChatCompletionRequestArgs::default()
             .model(model)
@@ -101,8 +101,7 @@ mod tests {
             You have access to the following Rust tools:
             1. `read_emails(count: usize) -> Vec<HashMap>`: Reads the top n emails from the user's mailbox.
             2. `send_slack_message(channel: String, message: String, link_previews: bool) -> String`: Sends a message to a Slack channel.
-
-            You will have to use the result from one tool call in order to call another tool.
+            You are not allowed to call multiple tools at once. You have to call each tool that you need one by one.
             The user's Team alias is: bob.sheffield@contoso.com";
         let tools = vec![
             ChatCompletionToolArgs::default()
