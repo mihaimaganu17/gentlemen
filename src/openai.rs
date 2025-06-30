@@ -100,7 +100,7 @@ mod tests {
         let system_message = "You are a helpful email assistant with the ability to summarize emails and to send Slack messages.
             You have access to the following Rust tools:
             1. `read_emails(count: usize) -> Vec<HashMap>`: Reads the top n emails from the user's mailbox.
-            2. `send_slack_message(channel: String, message: String, link_previews: bool) -> String`: Sends a message to a Slack channel.
+            2. `send_slack_message(channel: String, message: String, preview: bool) -> String`: Sends a message to a Slack channel.
             You are not allowed to call multiple tools at once. You have to call each tool that you need one by one.
             The user's Team alias is: bob.sheffield@contoso.com";
         let tools = vec![

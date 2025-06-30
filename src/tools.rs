@@ -88,12 +88,12 @@ const INBOX: [Email; 5] = [
 #[derive(Deserialize)]
 pub struct ReadEmailsArgs {
     // Number of emails to read
-    #[serde(deserialize_with = "ReadEmailsArgs::de_ser")]
+    #[serde(deserialize_with = "ReadEmailsArgs::count_de_ser")]
     count: usize,
 }
 
 impl ReadEmailsArgs {
-    pub fn de_ser<'de, D: Deserializer<'de>>(deserializer: D) -> Result<usize, D::Error> {
+    pub fn count_de_ser<'de, D: Deserializer<'de>>(deserializer: D) -> Result<usize, D::Error> {
         Ok(match Value::deserialize(deserializer)? {
             Value::String(s) => s.parse().map_err(de::Error::custom)?,
             Value::Number(num) => num.as_u64().ok_or(de::Error::custom("Invalid number"))? as usize,
@@ -123,7 +123,22 @@ pub struct SendSlackMessageArgs {
     // The message to be sent to the channel
     message: String,
     // Whether to enable link previous
+    #[serde(deserialize_with = "SendSlackMessageArgs::preview_de_ser")]
     preview: bool,
+}
+
+impl SendSlackMessageArgs {
+    pub fn preview_de_ser<'de, D: Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
+        Ok(match Value::deserialize(deserializer)? {
+            Value::String(s) => match s.as_str() {
+                "true" | "True" => true,
+                "false" | "False" => false,
+                _ => return Err(de::Error::custom("Invalid boolean value")),
+            }
+            Value::Bool(b) => b,
+            _ => return Err(de::Error::custom("wrong type")),
+        })
+    }
 }
 
 #[derive(Serialize, Debug)]
