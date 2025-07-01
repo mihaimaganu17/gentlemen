@@ -7,6 +7,9 @@ use async_openai::{
     },
 };
 use std::marker::PhantomData;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::collections::HashMap;
+use serde::Deserialize;
 
 // Planning loop handle all interaction with the model, tools and users.
 pub struct PlanningLoop<M: Clone, P: Plan<M>> {
@@ -85,7 +88,6 @@ impl Plan<Message> for BasicPlanner {
         let (new_state, action) = match message {
             Message::Chat(message) => {
                 let role = message.role;
-                println!("Refusal {:#?}", message);
                 match role {
                     Role::User => {
                         let conv_message = ChatCompletionRequestUserMessageArgs::default()
@@ -142,7 +144,6 @@ impl Plan<Message> for BasicPlanner {
                 (new_state, action)
             }
         };
-        println!("New state {:#?}", new_state.0);
         Ok((new_state, action))
     }
 }
@@ -225,16 +226,16 @@ impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
 }
 */
 
-/*
 pub struct VarPlanner {
-    tools: Vec<Function>,
+    tools: Vec<ChatCompletionTool>,
     memory: Memory,
 }
 
 pub static ID_MANAGER: AtomicUsize = AtomicUsize::new(0);
 
 type Memory = HashMap<Variable, ToolCallResult>;
-#[derive(Eq, Hash, PartialEq, Clone)]
+
+#[derive(Eq, Hash, PartialEq, Clone, Deserialize)]
 pub struct Variable(String);
 
 impl Variable {
@@ -246,57 +247,89 @@ impl Variable {
 type ToolCallResult = String;
 
 impl Plan<Message> for VarPlanner {
-    fn plan(&mut self, state: State, message: Message) -> (State, Action) {
-        // We need to make available variables in memory for the next tool calls
-        let tools: Vec<Function> = self
-            .tools
-            .iter()
-            .map(|tool| tool.format_vars(self.memory.keys().collect()))
-            .collect();
-        // This state can also be considered as the entire conversation history
+    type Error = PlanError;
+    fn plan(&mut self, state: State, message: Message) -> Result<(State, Action), Self::Error> {
         let mut new_state = state;
+        println!("{:#?}", message);
+        let (new_state, action) = match message {
+            Message::Chat(message) => {
+                let role = message.role;
+                match role {
+                    Role::User => {
+                        let conv_message = ChatCompletionRequestUserMessageArgs::default()
+                            .content(message.content.ok_or(PlanError::NoUserContent)?)
+                            .build()?
+                            .into();
+                        new_state.0.push(conv_message);
+                        let action = Action::Query(new_state.clone(), self.tools.clone());
+                        (new_state, action)
+                    }
+                    Role::Tool => {
+                        let x = Variable::fresh();
+                        self.memory.insert(x.clone(), message.content.unwrap());
+                        let conv_message = ChatCompletionRequestToolMessageArgs::default()
+                            .content(x.0)
+                            .tool_call_id(message.tool_calls.unwrap()[0].id.clone())
+                            .build()?
+                            .into();
+                        new_state.0.push(conv_message);
+                        let action = Action::Query(new_state.clone(), self.tools.clone());
+                        (new_state, action)
+                    }
+                    Role::Assistant => {
+                        if let Some(ref tool_calls) = message.tool_calls {
+                            let FunctionCall { name, arguments } = tool_calls[0].clone().function;
+                            let (conv_message, action) = if name == "read_variable" {
+                                let result = self.memory.get(&Variable(serde_json::from_str(arguments.as_str()).unwrap())).unwrap();
+                                let conv_message = ChatCompletionRequestToolMessageArgs::default()
+                                    .content(result.clone())
+                                    .tool_call_id(message.tool_calls.unwrap()[0].id.clone())
+                                    .build()?
+                                    .into();
+                                let action = Action::Query(new_state.clone(), self.tools.clone());
+                                (conv_message, action)
+                            } else {
+                                let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
+                                    .tool_calls(vec![tool_calls[0].clone()])
+                                    .build()?
+                                    .into();
+                                let action = Action::MakeCall(Function(name), Args(arguments), tool_calls[0].clone().id);
+                                (conv_message, action)
+                            };
 
-        match message {
-            Message::User(ref _user_message) => {
-                new_state.0.push(message.clone());
-                let action = Action::Query(new_state.clone(), tools);
-                (new_state, action)
-            }
-            Message::Tool(tool_result) => {
-                let x = Variable::fresh();
-                self.memory.insert(x.clone(), tool_result);
-                let var_message = Message::Tool(x.0);
-                new_state.0.push(var_message);
-                let action = Action::Query(new_state.clone(), tools);
-                (new_state, action)
-            }
-            Message::ToolCall(ref tool, ref args) => {
-                if tool.name() == "inspect" {
-                    let tool_result = self
-                        .memory
-                        .get(&(args.0[0].clone().try_into().unwrap()))
-                        .unwrap()
-                        .clone();
-                    new_state.0.push(Message::Tool(tool_result));
-                    let action = Action::Query(new_state.clone(), tools);
-                    (new_state, action)
-                } else {
-                    let new_args = self.expand_args(args);
-
-                    new_state.0.push(message.clone());
-                    let action = Action::MakeCall(tool.clone(), new_args);
-                    (new_state, action)
+                            new_state.0.push(conv_message);
+                            (new_state, action)
+                        } else if let Some(content) = message.content {
+                            let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
+                                .content(content.clone())
+                                .build()?
+                                .into();
+                            new_state.0.push(conv_message);
+                            let action = Action::Finish(content);
+                            (new_state, action)
+                        } else {
+                            todo!();
+                        }
+                    }
+                    _ => unimplemented!(),
                 }
             }
-            Message::Assistant(ref response) => {
-                let action = Action::Finish(response.clone());
-                new_state.0.push(message);
+            Message::ToolResult(content, id) => {
+                let conv_message = ChatCompletionRequestToolMessageArgs::default()
+                    .content(content)
+                    .tool_call_id(id)
+                    .build()?
+                    .into();
+                new_state.0.push(conv_message);
+                let action = Action::Query(new_state.clone(), self.tools.clone());
                 (new_state, action)
             }
-        }
+        };
+        Ok((new_state, action))
     }
 }
 
+/*
 impl VarPlanner {
     fn expand_args(&self, args: &Args) -> Args {
         Args(

@@ -15,7 +15,7 @@ pub enum _Message1 {
 }
 
 // A message passed as information in the planner
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Message {
     Chat(ChatCompletionResponseMessage),
     ToolResult(String, String),

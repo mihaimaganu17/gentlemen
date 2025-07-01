@@ -101,8 +101,12 @@ mod tests {
             You have access to the following Rust tools:
             1. `read_emails(count: usize) -> Vec<HashMap>`: Reads the top n emails from the user's mailbox.
             2. `send_slack_message(channel: String, message: String, preview: bool) -> String`: Sends a message to a Slack channel.
-            You are not allowed to call multiple tools at once. You have to call each tool that you need one by one.
-            The user's Team alias is: bob.sheffield@contoso.com";
+            3. `read_variable(variable: String) -> String`: Reads the contents of a variable.
+
+            Whenever you call a tool, you will not receive the result directly. Rather, a variable standing for the result will be appended to the conversation. You can use the `read_variable` tool to read the contents of a variable if you MUST know it before the next tool call.
+
+            If you are not sure about the contents of data pertaining to the user’s request, use `read_variable` or gather the relevant information from other tools: do NOT guess or make up an answer
+            The user's Slack alias is: bob.sheffield@contoso.com";
         let tools = vec![
             ChatCompletionToolArgs::default()
                 .function(FunctionObject {
