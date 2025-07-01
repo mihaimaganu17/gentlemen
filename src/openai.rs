@@ -89,7 +89,7 @@ mod tests {
     async fn basic_planner() {
         use crate::{
             ConversationHistory, Function,
-            plan::{BasicPlanner, PlanningLoop},
+            plan::{BasicPlanner, VarPlanner, PlanningLoop},
             tools::ReadEmailsArgs,
         };
         use async_openai::types::{
@@ -105,7 +105,8 @@ mod tests {
 
             Whenever you call a tool, you will not receive the result directly. Rather, a variable standing for the result will be appended to the conversation. You can use the `read_variable` tool to read the contents of a variable if you MUST know it before the next tool call.
 
-            If you are not sure about the contents of data pertaining to the user’s request, use `read_variable` or gather the relevant information from other tools: do NOT guess or make up an answer
+            If you are not sure about the contents of data pertaining to the user’s request, use `read_variable` or gather the relevant information from other tools: do NOT guess or make up an answer.
+            Each response you give cannot have more than 1 tool call. Your are not allowed to call multiple tools in parallel.
             The user's Slack alias is: bob.sheffield@contoso.com";
         let tools = vec![
             ChatCompletionToolArgs::default()
@@ -130,9 +131,21 @@ mod tests {
                 })
                 .build()
                 .unwrap(),
+            ChatCompletionToolArgs::default()
+                .function(FunctionObject {
+                    name: "read_variable".to_string(),
+                    description: Some(
+                        "Read a {variable} name that save a tool result to obtain the contents".to_string(),
+                    ),
+                    parameters: Some(json!({ "variable": "String" })),
+                    strict: Some(true),
+                })
+                .build()
+                .unwrap(),
         ];
 
         let basic_planner = BasicPlanner::new(tools.clone());
+        let var_planner = VarPlanner::new(tools.clone());
 
         let api_key = ""; //env!("OPENAI_API_KEY");
         let api_base = "http://localhost:11434/v1";
@@ -156,7 +169,7 @@ mod tests {
         let current_message = chat_request.await.unwrap().choices[0].message.clone();
 
         let mut planning_loop = PlanningLoop::new(
-            basic_planner,
+            var_planner,
             client,
             vec![Function("read_emails".to_string()), Function("send_slack_message".to_string())],
         );

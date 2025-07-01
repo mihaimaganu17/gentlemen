@@ -244,6 +244,12 @@ impl Variable {
     }
 }
 
+impl VarPlanner {
+    pub fn new(tools: Vec<ChatCompletionTool>) -> Self {
+        Self { tools, memory: HashMap::new() }
+    }
+}
+
 type ToolCallResult = String;
 
 impl Plan<Message> for VarPlanner {
@@ -330,20 +336,6 @@ impl Plan<Message> for VarPlanner {
 }
 
 /*
-impl VarPlanner {
-    fn expand_args(&self, args: &Args) -> Args {
-        Args(
-            args.0
-                .iter()
-                .map(|arg| match arg {
-                    Arg::Basic(_basic_str) => arg.clone(),
-                    Arg::Variable(var) => Arg::Basic(self.memory.get(var).unwrap().clone()),
-                })
-                .collect(),
-        )
-    }
-}
-
 pub struct TaintTrackingPlanner {
     tools: Vec<Function>,
     memory: Memory,
