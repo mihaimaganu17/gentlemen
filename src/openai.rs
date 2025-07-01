@@ -103,10 +103,10 @@ mod tests {
             2. `send_slack_message(channel: String, message: String, preview: bool) -> String`: Sends a message to a Slack channel.
             3. `read_variable(variable: String) -> String`: Reads the contents of a variable.
 
+            Your are not allowed to call multiple tools in parallel.
             Whenever you call a tool, you will not receive the result directly. Rather, a variable standing for the result will be appended to the conversation. You can use the `read_variable` tool to read the contents of a variable if you MUST know it before the next tool call.
 
             If you are not sure about the contents of data pertaining to the user’s request, use `read_variable` or gather the relevant information from other tools: do NOT guess or make up an answer.
-            Each response you give cannot have more than 1 tool call. Your are not allowed to call multiple tools in parallel.
             The user's Slack alias is: bob.sheffield@contoso.com";
         let tools = vec![
             ChatCompletionToolArgs::default()
