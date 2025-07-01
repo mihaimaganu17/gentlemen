@@ -89,7 +89,7 @@ mod tests {
     async fn basic_planner() {
         use crate::{
             ConversationHistory, Function,
-            plan::{BasicPlanner, VarPlanner, PlanningLoop},
+            plan::{BasicPlanner, PlanningLoop, VarPlanner},
             tools::ReadEmailsArgs,
         };
         use async_openai::types::{
@@ -124,9 +124,12 @@ mod tests {
                 .function(FunctionObject {
                     name: "send_slack_message".to_string(),
                     description: Some(
-                        "Sends a {message} to a slack {channel} with an optional {preview}".to_string(),
+                        "Sends a {message} to a slack {channel} with an optional {preview}"
+                            .to_string(),
                     ),
-                    parameters: Some(json!({ "channel": "String", "message": "String", "preview": "bool" })),
+                    parameters: Some(
+                        json!({ "channel": "String", "message": "String", "preview": "bool" }),
+                    ),
                     strict: Some(true),
                 })
                 .build()
@@ -135,7 +138,8 @@ mod tests {
                 .function(FunctionObject {
                     name: "read_variable".to_string(),
                     description: Some(
-                        "Read a {variable} name that save a tool result to obtain the contents".to_string(),
+                        "Read a {variable} name that save a tool result to obtain the contents"
+                            .to_string(),
                     ),
                     parameters: Some(json!({ "variable": "String" })),
                     strict: Some(true),
@@ -171,7 +175,10 @@ mod tests {
         let mut planning_loop = PlanningLoop::new(
             var_planner,
             client,
-            vec![Function("read_emails".to_string()), Function("send_slack_message".to_string())],
+            vec![
+                Function("read_emails".to_string()),
+                Function("send_slack_message".to_string()),
+            ],
         );
 
         let mut datastore = crate::Datastore;

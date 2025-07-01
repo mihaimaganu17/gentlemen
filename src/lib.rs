@@ -6,8 +6,8 @@ pub mod tools;
 
 pub use ifc::{Confidentiality, Integrity, ProductLattice};
 pub use message::{LabeledMessage, Message};
-pub use plan::{Plan, PlanningLoop, BasicPlanner};
-use tools::{ReadEmailsArgs, read_emails, SendSlackMessageArgs, send_slack_message};
+pub use plan::{BasicPlanner, Plan, PlanningLoop, VarPlanner};
+use tools::{ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack_message};
 
 // use plan::Variable;
 use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
@@ -44,7 +44,7 @@ impl Function {
                 println!("{result:?}");
                 serde_json::to_string(&result).unwrap()
             }
-            "send_slack_message" =>  {
+            "send_slack_message" => {
                 let args: SendSlackMessageArgs = serde_json::from_str(&args.0).unwrap();
                 let result = send_slack_message(args);
                 println!("{result:?}");

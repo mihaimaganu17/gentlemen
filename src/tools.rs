@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize, Deserializer, de};
+use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_json::Value;
 
 #[derive(Serialize, Clone, Debug)]
@@ -134,7 +134,7 @@ impl SendSlackMessageArgs {
                 "true" | "True" => true,
                 "false" | "False" => false,
                 _ => return Err(de::Error::custom("Invalid boolean value")),
-            }
+            },
             Value::Bool(b) => b,
             _ => return Err(de::Error::custom("wrong type")),
         })
@@ -148,7 +148,12 @@ pub struct SendSlackMessageResult {
 }
 
 pub fn send_slack_message(args: SendSlackMessageArgs) -> SendSlackMessageResult {
-    println!("Sending {0} to {1} channel {2} preview", args.message, args.channel, if args.preview { "with" } else { "without" });
+    println!(
+        "Sending {0} to {1} channel {2} preview",
+        args.message,
+        args.channel,
+        if args.preview { "with" } else { "without" }
+    );
     SendSlackMessageResult {
         _status: "Message sent!".to_string(),
     }
