@@ -262,7 +262,6 @@ impl Plan<Message> for VarPlanner {
     type Error = PlanError;
     fn plan(&mut self, state: State, message: Message) -> Result<(State, Action), Self::Error> {
         let mut new_state = state;
-        println!("{:#?}", message);
         let (new_state, action) = match message {
             Message::Chat(message) => {
                 let role = message.role;
@@ -347,6 +346,7 @@ impl Plan<Message> for VarPlanner {
                 (new_state, action)
             }
         };
+        println!("{:#?}\n\n", new_state.0);
         Ok((new_state, action))
     }
 }
