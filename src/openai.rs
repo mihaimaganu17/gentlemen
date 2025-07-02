@@ -24,6 +24,18 @@ impl LlmClient {
         Self { client }
     }
 
+    pub fn local_llama31() -> Self {
+        let api_key = "";
+        let api_base = "http://localhost:11434/v1";
+        Self::new(api_key, api_base)
+    }
+
+    pub fn openai() -> Self {
+        let api_key = env!("OPENAI_API_KEY");
+        let api_base = "https://api.openai.com/v1";
+        Self::new(api_key, api_base)
+    }
+
     pub async fn completion<V: Into<Prompt>>(
         &self,
         model: &str,
@@ -48,7 +60,7 @@ impl LlmClient {
         messages: M,
         tools: T,
     ) -> Result<CreateChatCompletionResponse, OpenAIError> {
-        let model = "llama3.1";
+        let model = "gpt-4o-mini";
         // Create a `CreateCompletionRequest`
         let request = CreateChatCompletionRequestArgs::default()
             .model(model)
@@ -94,7 +106,7 @@ mod tests {
         };
         use async_openai::types::{
             ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
-            ChatCompletionToolArgs, FunctionObject,
+            ChatCompletionToolArgs, FunctionObject, ChatCompletionToolType,
         };
         use serde_json::json;
         let system_message = "You are a helpful email assistant with the ability to summarize emails and to send Slack messages.
@@ -115,7 +127,17 @@ mod tests {
                     description: Some(
                         "Reading a number of {count} email from the inbox".to_string(),
                     ),
-                    parameters: Some(json!({ "count": "usize" })),
+                    parameters: Some(json!({
+                        "type": "object",
+                        "properties": {
+                            "count": {
+                                "type": "string",
+                                "description": "The number of emails to read",
+                            },
+                        },
+                        "required": ["count"],
+                        "additionalProperties": false,
+                    })),
                     strict: Some(true),
                 })
                 .build()
@@ -127,11 +149,28 @@ mod tests {
                         "Sends a {message} to a slack {channel} with an optional {preview}"
                             .to_string(),
                     ),
-                    parameters: Some(
-                        json!({ "channel": "String", "message": "String", "preview": "bool" }),
-                    ),
+                    parameters: Some(json!({
+                        "type": "object",
+                        "properties": {
+                            "channel": {
+                                "type": "string",
+                                "description": "The channel where the message should be sent",
+                            },
+                            "message": {
+                                "type": "string",
+                                "description": "The message to be sent",
+                            },
+                            "preview": {
+                                "type": "string",
+                                "description": "Whether or not to include the link preview",
+                            },
+                        },
+                        "required": ["channel", "message", "preview"],
+                        "additionalProperties": false,
+                    })),
                     strict: Some(true),
                 })
+                .r#type(ChatCompletionToolType::Function)
                 .build()
                 .unwrap(),
             ChatCompletionToolArgs::default()
@@ -141,9 +180,20 @@ mod tests {
                         "Read a {variable} name that save a tool result to obtain the contents"
                             .to_string(),
                     ),
-                    parameters: Some(json!({ "variable": "String" })),
+                    parameters: Some(json!({
+                        "type": "object",
+                        "properties": {
+                            "variable": {
+                                "type": "string",
+                                "description": "The variable to be read",
+                            },
+                        },
+                        "required": ["variable"],
+                        "additionalProperties": false,
+                    })),
                     strict: Some(true),
                 })
+                .r#type(ChatCompletionToolType::Function)
                 .build()
                 .unwrap(),
         ];
@@ -151,10 +201,8 @@ mod tests {
         let basic_planner = BasicPlanner::new(tools.clone());
         let var_planner = VarPlanner::new(tools.clone());
 
-        let api_key = ""; //env!("OPENAI_API_KEY");
-        let api_base = "http://localhost:11434/v1";
-
-        let client = LlmClient::new(api_key, api_base);
+        let client = LlmClient::openai();
+        //let client = LlmClient::local_llama31();
 
         // Build a system message
         let system_request = ChatCompletionRequestSystemMessageArgs::default()
