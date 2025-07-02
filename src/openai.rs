@@ -226,6 +226,7 @@ mod tests {
             vec![
                 Function("read_emails".to_string()),
                 Function("send_slack_message".to_string()),
+                Function("read_variable".to_string()),
             ],
         );
 

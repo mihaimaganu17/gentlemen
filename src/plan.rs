@@ -290,6 +290,7 @@ impl Plan<Message> for VarPlanner {
                     Role::Assistant => {
                         if let Some(ref tool_calls) = message.tool_calls {
                             let FunctionCall { name, arguments } = tool_calls[0].clone().function;
+                            println!("{:#?}", arguments);
                             let (conv_message, action) = if name == "read_variable" {
                                 let result = self
                                     .memory
@@ -336,8 +337,10 @@ impl Plan<Message> for VarPlanner {
                 }
             }
             Message::ToolResult(content, id) => {
+                let x = Variable::fresh();
+                self.memory.insert(x.clone(), content);
                 let conv_message = ChatCompletionRequestToolMessageArgs::default()
-                    .content(content)
+                    .content(x.0)
                     .tool_call_id(id)
                     .build()?
                     .into();
