@@ -1,5 +1,5 @@
 use serde::{Deserialize, Deserializer, Serialize, de};
-use serde_json::{Value, Map, json};
+use serde_json::{Map, Value, json};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -163,7 +163,6 @@ pub fn send_slack_message(args: SendSlackMessageArgs) -> SendSlackMessageResult 
 
 pub static ID_MANAGER: AtomicUsize = AtomicUsize::new(0);
 
-
 type ToolCallResult = String;
 pub type Memory = HashMap<Variable, ToolCallResult>;
 
@@ -183,14 +182,16 @@ pub fn variable_schema_gen(parameters: Value, vars: Vec<Variable>) -> Value {
     };
 
     for (prop_name, value) in parameters.into_iter() {
-        let value = if prop_name == "properties" {
-            match value {
-                Value::Object(map) => {
-                    let mut new_map = Map::new();
-                    for (prop_name, value) in map.into_iter() {
-                        let description = value.get("description").unwrap_or(&json!("")).clone();
-                        let prop_type = value.get("type").unwrap_or(&json!("")).clone();
-                        new_map.insert(prop_name, json!({
+        let value =
+            if prop_name == "properties" {
+                match value {
+                    Value::Object(map) => {
+                        let mut new_map = Map::new();
+                        for (prop_name, value) in map.into_iter() {
+                            let description =
+                                value.get("description").unwrap_or(&json!("")).clone();
+                            let prop_type = value.get("type").unwrap_or(&json!("")).clone();
+                            new_map.insert(prop_name, json!({
                             "description": description,
                             "anyOf": [
                                 {
@@ -213,14 +214,14 @@ pub fn variable_schema_gen(parameters: Value, vars: Vec<Variable>) -> Value {
                                 }
                             ]
                         }));
+                        }
+                        serde_json::Value::Object(new_map)
                     }
-                    serde_json::Value::Object(new_map)
+                    _ => panic!("{:?}", vars),
                 }
-                _ => panic!("{:?}", vars),
-            }
-        } else {
-            value
-        };
+            } else {
+                value
+            };
         new_parameters.insert(prop_name, value);
     }
     serde_json::Value::Object(new_parameters)
@@ -257,4 +258,3 @@ mod tests {
         println!("{:#?}", new_parameters);
     }
 }
-

@@ -1,3 +1,4 @@
+use crate::tools::variable_schema_gen;
 use async_openai::{
     Client,
     config::OpenAIConfig,
@@ -8,7 +9,6 @@ use async_openai::{
         Prompt,
     },
 };
-use crate::tools::variable_schema_gen;
 
 pub struct LlmClient {
     client: Client<OpenAIConfig>,
@@ -107,7 +107,7 @@ mod tests {
         };
         use async_openai::types::{
             ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
-            ChatCompletionToolArgs, FunctionObject, ChatCompletionToolType,
+            ChatCompletionToolArgs, ChatCompletionToolType, FunctionObject,
         };
         use serde_json::json;
         let system_message = "You are a helpful email assistant with the ability to summarize emails and to send Slack messages.
@@ -127,7 +127,8 @@ mod tests {
 
             If you are not sure about the contents of data pertaining to the user’s request, use `read_variable` or gather the relevant information from other tools: do NOT guess or make up an answer.
             The user's Slack alias is: bob.sheffield@contoso.com";
-        let tools = vec![
+        let tools =
+            vec![
             ChatCompletionToolArgs::default()
                 .function(FunctionObject {
                     name: "read_emails".to_string(),

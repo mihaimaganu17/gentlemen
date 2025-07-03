@@ -1,4 +1,8 @@
-use crate::{Action, Args, Datastore, Function, Message, State, openai::LlmClient, tools::{Memory, Variable}};
+use crate::{
+    Action, Args, Datastore, Function, Message, State,
+    openai::LlmClient,
+    tools::{Memory, Variable},
+};
 use async_openai::{
     error::OpenAIError,
     types::{
@@ -7,7 +11,7 @@ use async_openai::{
     },
 };
 use serde::Deserialize;
-use serde_json::{Value, Map};
+use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
@@ -253,7 +257,9 @@ impl VarPlanner {
             match value {
                 Value::Object(kind_map) => {
                     match kind_map.get("kind").unwrap().as_str() {
-                        Some("value") => new_args.insert(arg_name, kind_map.get("value").unwrap().clone()),
+                        Some("value") => {
+                            new_args.insert(arg_name, kind_map.get("value").unwrap().clone())
+                        }
                         Some("variable") => todo!(),
                         Some(kind) => panic!("{}", format!("Invalid kind argument {kind}")),
                         None => panic!("kind field is missing"),
