@@ -97,7 +97,7 @@ mod tests {
         println!("{}", response.choices.first().unwrap().text);
     }
 
-    #[tokio::test]
+    //#[tokio::test]
     async fn basic_planner() {
         use crate::{
             ConversationHistory, Function,

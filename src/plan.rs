@@ -1,4 +1,4 @@
-use crate::{Action, Args, Datastore, Function, Message, State, openai::LlmClient};
+use crate::{Action, Args, Datastore, Function, Message, State, openai::LlmClient, tools::{Memory, Variable}};
 use async_openai::{
     error::OpenAIError,
     types::{
@@ -9,7 +9,6 @@ use async_openai::{
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 // Planning loop handle all interaction with the model, tools and users.
 pub struct PlanningLoop<M: Clone, P: Plan<M>> {
@@ -234,19 +233,6 @@ pub struct VarPlanner {
     memory: Memory,
 }
 
-pub static ID_MANAGER: AtomicUsize = AtomicUsize::new(0);
-
-type Memory = HashMap<Variable, ToolCallResult>;
-
-#[derive(Eq, Hash, PartialEq, Clone, Deserialize)]
-pub struct Variable(String);
-
-impl Variable {
-    pub fn fresh() -> Self {
-        Self(format!("{}", ID_MANAGER.fetch_add(1, Ordering::Relaxed)))
-    }
-}
-
 impl VarPlanner {
     pub fn new(tools: Vec<ChatCompletionTool>) -> Self {
         Self {
@@ -255,8 +241,6 @@ impl VarPlanner {
         }
     }
 }
-
-type ToolCallResult = String;
 
 impl Plan<Message> for VarPlanner {
     type Error = PlanError;

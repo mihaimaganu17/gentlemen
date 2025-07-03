@@ -1,5 +1,7 @@
 use serde::{Deserialize, Deserializer, Serialize, de};
-use serde_json::Value;
+use serde_json::{Value, Map, json};
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Serialize, Clone, Debug)]
 pub struct Email {
@@ -157,4 +159,60 @@ pub fn send_slack_message(args: SendSlackMessageArgs) -> SendSlackMessageResult 
     SendSlackMessageResult {
         _status: "Message sent!".to_string(),
     }
+}
+
+pub static ID_MANAGER: AtomicUsize = AtomicUsize::new(0);
+
+
+type ToolCallResult = String;
+pub type Memory = HashMap<Variable, ToolCallResult>;
+
+#[derive(Eq, Hash, PartialEq, Clone, Serialize, Deserialize, Debug)]
+pub struct Variable(pub String);
+
+impl Variable {
+    pub fn fresh() -> Self {
+        Self(format!("{}", ID_MANAGER.fetch_add(1, Ordering::Relaxed)))
+    }
+}
+
+pub fn variable_schema_gen(properties: Value, vars: Vec<Variable>) -> Value {
+    match properties {
+        Value::Object(map) => {
+            let mut new_map = Map::new();
+            for (prop_name, value) in map.into_iter() {
+                let description = value.get("description").unwrap_or(&json!("")).clone();
+                let prop_type = value.get("type").unwrap_or(&json!("")).clone();
+                new_map.insert(prop_name, json!({
+                    "description": description,
+                    "anyOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "kind": { "type": "string", "const": "value" },
+                                "value": { "type": prop_type },
+                            },
+                            "required": ["kind", "value"],
+                            "additionalProperties": false,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "kind": { "type": "string", "const": "variable_name" },
+                                "value": { "type": "string", "enum": vars},
+                            },
+                            "required": ["kind", "value"],
+                            "additionalProperties": false,
+                        }
+                    ]
+                }));
+            }
+            serde_json::Value::Object(new_map)
+        }
+        _ => panic!("{:?}", vars),
+    }
+}
+
+#[cfg(tests)]
+mod tests {
 }
