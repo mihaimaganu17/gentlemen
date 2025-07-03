@@ -8,6 +8,7 @@ use async_openai::{
         Prompt,
     },
 };
+use crate::tools::variable_schema_gen;
 
 pub struct LlmClient {
     client: Client<OpenAIConfig>,
@@ -97,7 +98,7 @@ mod tests {
         println!("{}", response.choices.first().unwrap().text);
     }
 
-    //#[tokio::test]
+    #[tokio::test]
     async fn basic_planner() {
         use crate::{
             ConversationHistory, Function,
@@ -118,6 +119,12 @@ mod tests {
             Your are not allowed to call multiple tools in parallel.
             Whenever you call a tool, you will not receive the result directly. Rather, a variable standing for the result will be appended to the conversation. You can use the `read_variable` tool to read the contents of a variable if you MUST know it before the next tool call.
 
+            All arguments to tools have an `anyOf` schema, with a `kind` tag indicating whether the value is a literal value (`value`) or a variable name (`variable_name`).
+            When choosing tool call arguments, make sure to use the `kind` tag to indicate whether the value is a literal value or a variable name.
+            - If `kind` == \"value\", the value MUST be passed in the `value` field.
+            - If `kind` == \"variable\", a variable name MUST be passed in the `variable` field instead.
+            Make absolutely sure to respect this convention. You MUST NOT pass a variable name in the `value` field or vice versa.
+
             If you are not sure about the contents of data pertaining to the user’s request, use `read_variable` or gather the relevant information from other tools: do NOT guess or make up an answer.
             The user's Slack alias is: bob.sheffield@contoso.com";
         let tools = vec![
@@ -127,7 +134,7 @@ mod tests {
                     description: Some(
                         "Reading a number of {count} email from the inbox".to_string(),
                     ),
-                    parameters: Some(json!({
+                    parameters: Some(variable_schema_gen(json!({
                         "type": "object",
                         "properties": {
                             "count": {
@@ -137,7 +144,7 @@ mod tests {
                         },
                         "required": ["count"],
                         "additionalProperties": false,
-                    })),
+                    }), vec![])),
                     strict: Some(true),
                 })
                 .build()
@@ -149,7 +156,7 @@ mod tests {
                         "Sends a {message} to a slack {channel} with an optional {preview}"
                             .to_string(),
                     ),
-                    parameters: Some(json!({
+                    parameters: Some(variable_schema_gen(json!({
                         "type": "object",
                         "properties": {
                             "channel": {
@@ -167,7 +174,7 @@ mod tests {
                         },
                         "required": ["channel", "message", "preview"],
                         "additionalProperties": false,
-                    })),
+                    }), vec![])),
                     strict: Some(true),
                 })
                 .r#type(ChatCompletionToolType::Function)
@@ -180,7 +187,7 @@ mod tests {
                         "Read a {variable} name that save a tool result to obtain the contents"
                             .to_string(),
                     ),
-                    parameters: Some(json!({
+                    parameters: Some(variable_schema_gen(json!({
                         "type": "object",
                         "properties": {
                             "variable": {
@@ -190,7 +197,7 @@ mod tests {
                         },
                         "required": ["variable"],
                         "additionalProperties": false,
-                    })),
+                    }), vec![])),
                     strict: Some(true),
                 })
                 .r#type(ChatCompletionToolType::Function)
