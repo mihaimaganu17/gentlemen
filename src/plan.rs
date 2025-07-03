@@ -242,9 +242,10 @@ impl VarPlanner {
         }
     }
 
-    pub fn normalize_args(&self, args: Value) -> Value {
+    pub fn normalize_args(&self, args: String) -> String {
+        let args = serde_json::from_str(&args).unwrap();
         let Value::Object(map) = args else {
-            return args;
+            return "Mata".to_string();
         };
         let mut new_args = Map::new();
 
@@ -261,7 +262,7 @@ impl VarPlanner {
                 _ => panic!("Invalid argument schema {value:#?}"),
             }
         }
-        Value::Object(new_args)
+        serde_json::to_string(&Value::Object(new_args)).unwrap()
     }
 }
 
@@ -299,17 +300,13 @@ impl Plan<Message> for VarPlanner {
                             let FunctionCall { name, arguments } = tool_calls[0].clone().function;
                             println!("{:#?}", arguments);
                             let (conv_message, action) = if name == "read_variable" {
-                                let result = self
-                                    .memory
-                                    .get(&Variable(
-                                        serde_json::from_str(arguments.as_str()).unwrap(),
-                                    ))
-                                    .unwrap();
+                                let result = self.normalize_args(arguments);
                                 let conv_message = ChatCompletionRequestToolMessageArgs::default()
                                     .content(result.clone())
                                     .tool_call_id(message.tool_calls.unwrap()[0].id.clone())
                                     .build()?
                                     .into();
+                                panic!("{:#?}", conv_message);
                                 let action = Action::Query(new_state.clone(), self.tools.clone());
                                 (conv_message, action)
                             } else {
@@ -320,7 +317,7 @@ impl Plan<Message> for VarPlanner {
                                         .into();
                                 let action = Action::MakeCall(
                                     Function(name),
-                                    Args(arguments),
+                                    Args(self.normalize_args(arguments)),
                                     tool_calls[0].clone().id,
                                 );
                                 (conv_message, action)
