@@ -176,43 +176,85 @@ impl Variable {
     }
 }
 
-pub fn variable_schema_gen(properties: Value, vars: Vec<Variable>) -> Value {
-    match properties {
-        Value::Object(map) => {
-            let mut new_map = Map::new();
-            for (prop_name, value) in map.into_iter() {
-                let description = value.get("description").unwrap_or(&json!("")).clone();
-                let prop_type = value.get("type").unwrap_or(&json!("")).clone();
-                new_map.insert(prop_name, json!({
-                    "description": description,
-                    "anyOf": [
-                        {
-                            "type": "object",
-                            "properties": {
-                                "kind": { "type": "string", "const": "value" },
-                                "value": { "type": prop_type },
-                            },
-                            "required": ["kind", "value"],
-                            "additionalProperties": false,
-                        },
-                        {
-                            "type": "object",
-                            "properties": {
-                                "kind": { "type": "string", "const": "variable_name" },
-                                "value": { "type": "string", "enum": vars},
-                            },
-                            "required": ["kind", "value"],
-                            "additionalProperties": false,
-                        }
-                    ]
-                }));
+pub fn variable_schema_gen(parameters: Value, vars: Vec<Variable>) -> Value {
+    let mut new_parameters = Map::new();
+    let Value::Object(parameters) = parameters else {
+        return parameters;
+    };
+
+    for (prop_name, value) in parameters.into_iter() {
+        let value = if prop_name == "properties" {
+            match value {
+                Value::Object(map) => {
+                    let mut new_map = Map::new();
+                    for (prop_name, value) in map.into_iter() {
+                        let description = value.get("description").unwrap_or(&json!("")).clone();
+                        let prop_type = value.get("type").unwrap_or(&json!("")).clone();
+                        new_map.insert(prop_name, json!({
+                            "description": description,
+                            "anyOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "kind": { "type": "string", "const": "value" },
+                                        "value": { "type": prop_type },
+                                    },
+                                    "required": ["kind", "value"],
+                                    "additionalProperties": false,
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "kind": { "type": "string", "const": "variable_name" },
+                                        "value": { "type": "string", "enum": vars},
+                                    },
+                                    "required": ["kind", "value"],
+                                    "additionalProperties": false,
+                                }
+                            ]
+                        }));
+                    }
+                    serde_json::Value::Object(new_map)
+                }
+                _ => panic!("{:?}", vars),
             }
-            serde_json::Value::Object(new_map)
-        }
-        _ => panic!("{:?}", vars),
+        } else {
+            value
+        };
+        new_parameters.insert(prop_name, value);
+    }
+    serde_json::Value::Object(new_parameters)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn send_slack_message() {
+        let parameters = json!({
+            "type": "object",
+            "properties": {
+                "channel": {
+                    "type": "string",
+                    "description": "The channel where the message should be sent",
+                },
+                "message": {
+                    "type": "string",
+                    "description": "The message to be sent",
+                },
+                "preview": {
+                    "type": "string",
+                    "description": "Whether or not to include the link preview",
+                },
+            },
+            "required": ["channel", "message", "preview"],
+            "additionalProperties": false,
+        });
+        let variables = vec![Variable("Id1".to_string())];
+        let new_parameters = variable_schema_gen(parameters, variables);
+        println!("{:#?}", new_parameters);
     }
 }
 
-#[cfg(tests)]
-mod tests {
-}
