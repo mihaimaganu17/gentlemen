@@ -16,7 +16,6 @@ use async_openai::{
 use serde_json::{Map, Value};
 use std::collections::HashMap;
 
-
 // State passing planner which is plugged into the `PlanningLoop`
 pub trait Plan<M> {
     type Error: std::fmt::Debug;
@@ -256,11 +255,15 @@ impl Plan<Message> for VarPlanner {
                             let FunctionCall { name, arguments } = tool_calls[0].clone().function;
                             let action = if name == "read_variable" {
                                 let variable = self.normalize_args(arguments);
-                                let result = self.memory.get(&serde_json::from_str(&variable).unwrap()).unwrap();
-                                let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
-                                    .tool_calls(vec![tool_calls[0].clone()])
-                                    .build()?
-                                    .into();
+                                let result = self
+                                    .memory
+                                    .get(&serde_json::from_str(&variable).unwrap())
+                                    .unwrap();
+                                let conv_message =
+                                    ChatCompletionRequestAssistantMessageArgs::default()
+                                        .tool_calls(vec![tool_calls[0].clone()])
+                                        .build()?
+                                        .into();
                                 new_state.0.push(conv_message);
                                 let conv_message = ChatCompletionRequestToolMessageArgs::default()
                                     .content(result.clone())
@@ -268,8 +271,7 @@ impl Plan<Message> for VarPlanner {
                                     .build()?
                                     .into();
                                 new_state.0.push(conv_message);
-                                let action = Action::Query(new_state.clone(), self.tools.clone());
-                                action
+                                Action::Query(new_state.clone(), self.tools.clone())
                             } else {
                                 let conv_message =
                                     ChatCompletionRequestAssistantMessageArgs::default()
@@ -277,12 +279,11 @@ impl Plan<Message> for VarPlanner {
                                         .build()?
                                         .into();
                                 new_state.0.push(conv_message);
-                                let action = Action::MakeCall(
+                                Action::MakeCall(
                                     Function(name),
                                     Args(self.normalize_args(arguments)),
                                     tool_calls[0].clone().id,
-                                );
-                                action
+                                )
                             };
                             (new_state, action)
                         } else if let Some(content) = message.content {

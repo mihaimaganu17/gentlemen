@@ -1,9 +1,6 @@
-use crate::{
-    Action, Datastore, Function, Message, State,
-    openai::LlmClient,
-};
+use super::{Plan, PlanError};
+use crate::{Action, Datastore, Function, Message, State, openai::LlmClient};
 use std::marker::PhantomData;
-use super::{PlanError, Plan};
 
 /// Planning loop orchestrates the communication with the model and handles the `Planner`'s
 /// required actions.

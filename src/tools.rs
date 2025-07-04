@@ -168,8 +168,8 @@ pub type Memory = HashMap<Variable, ToolCallResult>;
 
 #[derive(Eq, Hash, PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub struct Variable {
-    #[serde(alias="variable")]
-    pub value: String
+    #[serde(alias = "variable")]
+    pub value: String,
 }
 
 impl Variable {
