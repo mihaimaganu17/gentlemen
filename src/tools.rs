@@ -167,11 +167,18 @@ type ToolCallResult = String;
 pub type Memory = HashMap<Variable, ToolCallResult>;
 
 #[derive(Eq, Hash, PartialEq, Clone, Serialize, Deserialize, Debug)]
-pub struct Variable(pub String);
+pub struct Variable {
+    #[serde(alias="variable")]
+    pub value: String
+}
 
 impl Variable {
+    pub fn new(value: String) -> Self {
+        Self { value }
+    }
+
     pub fn fresh() -> Self {
-        Self(format!("{}", ID_MANAGER.fetch_add(1, Ordering::Relaxed)))
+        Self::new(format!("{}", ID_MANAGER.fetch_add(1, Ordering::Relaxed)))
     }
 }
 
@@ -253,8 +260,7 @@ mod tests {
             "required": ["channel", "message", "preview"],
             "additionalProperties": false,
         });
-        let variables = vec![Variable("Id1".to_string())];
+        let variables = vec![Variable::new("Id1".to_string())];
         let new_parameters = variable_schema_gen(parameters, variables);
-        println!("{:#?}", new_parameters);
     }
 }
