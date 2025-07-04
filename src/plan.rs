@@ -10,20 +10,26 @@ use async_openai::{
         ChatCompletionRequestUserMessageArgs, ChatCompletionTool, FunctionCall, Role,
     },
 };
-use serde::Deserialize;
 use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-// Planning loop handle all interaction with the model, tools and users.
+/// Planning loop orchestrates the communication with the model and handles the `Planner`'s
+/// required actions.
 pub struct PlanningLoop<M: Clone, P: Plan<M>> {
+    // The planner used to plan the next action in the loop
     planner: P,
+    // The LLM model used to accomplish the task
     model: LlmClient,
+    // The tools the LLM model has access to
     tools: Vec<Function>,
+    // Phantom data such that we can bind the type of `Message` that the planner `P` uses
     phantom: PhantomData<M>,
 }
 
 impl<P: Plan<Message>> PlanningLoop<Message, P> {
+    /// Create a new `PlanninLoop` with an action `planner` a `model` to do the work and available
+    /// `tools` that the model can call
     pub fn new(planner: P, model: LlmClient, tools: Vec<Function>) -> Self {
         Self {
             planner,
@@ -32,47 +38,62 @@ impl<P: Plan<Message>> PlanningLoop<Message, P> {
             phantom: PhantomData,
         }
     }
-    // At each iteration of the loop, the current `state`, the latest `message` of the conversation
-    // and the `datastore` are passed.
+    /// The entry point for executing the `PlanningLoop`. At each iteration of the loop, the
+    /// current `state`, the latest `message` of the conversation and the `datastore` are passed.
     pub async fn run(
         &mut self,
         state: State,
         datastore: &mut Datastore,
         message: Message,
     ) -> Result<String, PlanError> {
+        // Bind the given message to a mutable variable as it will be updated inside the following
+        // loop based on what action the loop is taking.
         let mut current_message = message;
+        // Bind the given state to a mutable variable as it will be updates insied the following
+        // loop with a new message.
         let mut current_state = state;
         loop {
             let action;
+            // Plan the next action giving the current message and state. The new message is sent
+            // separate from the state as it will be converted by the planner from a
+            // `ChatCompletionRequest{Type}` message to a `ChatCompletionResponse{Type}` message.
             (current_state, action) = self
                 .planner
                 .plan(current_state, current_message)
-                .map_err(|_| PlanError::CannotPlan)?;
+                .map_err(|e| PlanError::CannotPlan(format!("{:?}", e)))?;
             match action {
+                // We have to query the model
                 Action::Query(conv_history, tools) => {
-                    println!("State {:#?}", conv_history.0);
+                    // Build a chat request with all the previous conversation history and the
+                    // available tools
                     let chat_request = self.model.chat(conv_history.0, tools);
+                    // Send the request and save the first response choice as the new message
                     current_message = Message::Chat(chat_request.await?.choices[0].message.clone());
                 }
+                // We have to call a tool requested by the model
                 Action::MakeCall(function, args, id) => {
+                    // Find the requested `function` and call it with the given arguments
                     let tool_result = self
                         .tools
                         .iter()
                         .find(|&f| f == &function)
                         .unwrap()
                         .call(args, datastore);
+                    // New message represents the result we got from calling the above tool and we
+                    // also keep the tool id such that the model can associate the tools request
+                    // with the tool id.
                     current_message = Message::ToolResult(tool_result, id);
                 }
+                // We got the final model response and we return it back to the caller
                 Action::Finish(result) => return Ok(result),
             }
-            println!("Planning loop message {:#?}", current_message);
         }
     }
 }
 
 // State passing planner which is plugged into the `PlanningLoop`
 pub trait Plan<M> {
-    type Error;
+    type Error: std::fmt::Debug;
     fn plan(&mut self, state: State, message: M) -> Result<(State, Action), Self::Error>;
 }
 
@@ -163,7 +184,7 @@ pub enum PlanError {
     NoToolContent,
     NoToolCalls,
     NoFunctionCall,
-    CannotPlan,
+    CannotPlan(String),
     OpenAIError(OpenAIError),
 }
 

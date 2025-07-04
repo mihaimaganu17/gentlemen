@@ -1,4 +1,3 @@
-use crate::tools::variable_schema_gen;
 use async_openai::{
     Client,
     config::OpenAIConfig,
@@ -79,6 +78,7 @@ impl LlmClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tools::variable_schema_gen;
 
     // #[tokio::test]
     async fn openai_local_llama32_demo() {
