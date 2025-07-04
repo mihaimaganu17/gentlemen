@@ -50,6 +50,7 @@ impl<P: Plan<Message>> PlanningLoop<Message, P> {
                 .map_err(|_| PlanError::CannotPlan)?;
             match action {
                 Action::Query(conv_history, tools) => {
+                    println!("State {:#?}", conv_history.0);
                     let chat_request = self.model.chat(conv_history.0, tools);
                     current_message = Message::Chat(chat_request.await?.choices[0].message.clone());
                 }
@@ -64,6 +65,7 @@ impl<P: Plan<Message>> PlanningLoop<Message, P> {
                 }
                 Action::Finish(result) => return Ok(result),
             }
+            println!("Planning loop message {:#?}", current_message);
         }
     }
 }
@@ -305,31 +307,36 @@ impl Plan<Message> for VarPlanner {
                     Role::Assistant => {
                         if let Some(ref tool_calls) = message.tool_calls {
                             let FunctionCall { name, arguments } = tool_calls[0].clone().function;
-                            let (conv_message, action) = if name == "read_variable" {
+                            let action = if name == "read_variable" {
                                 let variable = self.normalize_args(arguments);
                                 let result = self.memory.get(&serde_json::from_str(&variable).unwrap()).unwrap();
+                                let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
+                                    .tool_calls(vec![tool_calls[0].clone()])
+                                    .build()?
+                                    .into();
+                                new_state.0.push(conv_message);
                                 let conv_message = ChatCompletionRequestToolMessageArgs::default()
                                     .content(result.clone())
                                     .tool_call_id(message.tool_calls.unwrap()[0].id.clone())
                                     .build()?
                                     .into();
+                                new_state.0.push(conv_message);
                                 let action = Action::Query(new_state.clone(), self.tools.clone());
-                                (conv_message, action)
+                                action
                             } else {
                                 let conv_message =
                                     ChatCompletionRequestAssistantMessageArgs::default()
                                         .tool_calls(vec![tool_calls[0].clone()])
                                         .build()?
                                         .into();
+                                new_state.0.push(conv_message);
                                 let action = Action::MakeCall(
                                     Function(name),
                                     Args(self.normalize_args(arguments)),
                                     tool_calls[0].clone().id,
                                 );
-                                (conv_message, action)
+                                action
                             };
-
-                            new_state.0.push(conv_message);
                             (new_state, action)
                         } else if let Some(content) = message.content {
                             let conv_message = ChatCompletionRequestAssistantMessageArgs::default()
@@ -347,6 +354,7 @@ impl Plan<Message> for VarPlanner {
                 }
             }
             Message::ToolResult(content, id) => {
+                println!("{content:#?} {id:#?}");
                 let x = Variable::fresh();
                 self.memory.insert(x.clone(), content);
                 let conv_message = ChatCompletionRequestToolMessageArgs::default()
@@ -359,7 +367,6 @@ impl Plan<Message> for VarPlanner {
                 (new_state, action)
             }
         };
-        println!("action {:#?}", action);
         Ok((new_state, action))
     }
 }

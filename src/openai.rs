@@ -114,10 +114,9 @@ mod tests {
             You have access to the following Rust tools:
             1. `read_emails(count: usize) -> Vec<HashMap>`: Reads the top n emails from the user's mailbox.
             2. `send_slack_message(channel: String, message: String, preview: bool) -> String`: Sends a message to a Slack channel.
-            3. `read_variable(variable: String) -> String`: Reads the contents of a variable.
+            3. `read_variable(variable: String) -> String`: Reads the contents of a variable to obtain results of a tool call.
 
-            Your are not allowed to call multiple tools in parallel.
-            Whenever you call a tool, you will not receive the result directly. Rather, a variable standing for the result will be appended to the conversation. You can use the `read_variable` tool to read the contents of a variable if you MUST know it before the next tool call.
+            Whenever you call a tool, you will not receive the result directly. Rather, a variable standing in for the result will be appended to the conversation. You can use the `read_variable` tool to read the contents of a variable and obtain the results of the previous tool call if you MUST know it before the next tool call.
 
             All arguments to tools have an `anyOf` schema, with a `kind` tag indicating whether the value is a literal value (`value`) or a variable name (`variable_name`).
             When choosing tool call arguments, make sure to use the `kind` tag to indicate whether the value is a literal value or a variable name.
