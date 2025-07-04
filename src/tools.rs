@@ -261,6 +261,6 @@ mod tests {
             "additionalProperties": false,
         });
         let variables = vec![Variable::new("Id1".to_string())];
-        let new_parameters = variable_schema_gen(parameters, variables);
+        let _new_parameters = variable_schema_gen(parameters, variables);
     }
 }

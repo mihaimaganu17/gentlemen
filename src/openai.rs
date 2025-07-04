@@ -81,7 +81,7 @@ mod tests {
     use crate::tools::variable_schema_gen;
 
     // #[tokio::test]
-    async fn openai_local_llama32_demo() {
+    async fn _openai_local_llama32_demo() {
         let api_key = ""; //env!("OPENAI_API_KEY");
         let api_base = "http://localhost:11434/v1";
 
@@ -103,7 +103,6 @@ mod tests {
         use crate::{
             ConversationHistory, Function,
             plan::{BasicPlanner, PlanningLoop, VarPlanner},
-            tools::ReadEmailsArgs,
         };
         use async_openai::types::{
             ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
@@ -205,7 +204,7 @@ mod tests {
                 .unwrap(),
         ];
 
-        let basic_planner = BasicPlanner::new(tools.clone());
+        let _basic_planner = BasicPlanner::new(tools.clone());
         let var_planner = VarPlanner::new(tools.clone());
 
         let client = LlmClient::openai();
