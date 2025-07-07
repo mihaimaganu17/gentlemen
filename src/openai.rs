@@ -98,11 +98,128 @@ mod tests {
         println!("{}", response.choices.first().unwrap().text);
     }
 
-    #[tokio::test]
-    async fn basic_planner() {
+    // #[tokio::test]
+    async fn _basic_planner() {
         use crate::{
             ConversationHistory, Function,
-            plan::{BasicPlanner, PlanningLoop, VarPlanner},
+            plan::{BasicPlanner, PlanningLoop},
+        };
+        use async_openai::types::{
+            ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
+            ChatCompletionToolArgs, ChatCompletionToolType, FunctionObject,
+        };
+        use serde_json::json;
+        let system_message = "You are a helpful email assistant with the ability to summarize emails and to send Slack messages.
+            You have access to the following Rust tools:
+            1. `read_emails(count: usize) -> Vec<HashMap>`: Reads the top n emails from the user's mailbox.
+            2. `send_slack_message(channel: String, message: String, preview: bool) -> String`: Sends a message to a Slack channel.
+
+            All arguments to tools have an `anyOf` schema, with a `kind` tag indicating whether the value is a literal value (`value`) or a variable name (`variable_name`).
+            When choosing tool call arguments, make sure to use the `kind` tag to indicate whether the value is a literal value or a variable name.
+            - If `kind` == \"value\", the value MUST be passed in the `value` field.
+            - If `kind` == \"variable\", a variable name MUST be passed in the `variable` field instead.
+            Make absolutely sure to respect this convention. You MUST NOT pass a variable name in the `value` field or vice versa.
+
+            The user's Slack alias is: bob.sheffield@contoso.com";
+        let tools =
+            vec![
+            ChatCompletionToolArgs::default()
+                .function(FunctionObject {
+                    name: "read_emails".to_string(),
+                    description: Some(
+                        "Reading a number of {count} email from the inbox".to_string(),
+                    ),
+                    parameters: Some(variable_schema_gen(json!({
+                        "type": "object",
+                        "properties": {
+                            "count": {
+                                "type": "string",
+                                "description": "The number of emails to read",
+                            },
+                        },
+                        "required": ["count"],
+                        "additionalProperties": false,
+                    }), vec![])),
+                    strict: Some(true),
+                })
+                .build()
+                .unwrap(),
+            ChatCompletionToolArgs::default()
+                .function(FunctionObject {
+                    name: "send_slack_message".to_string(),
+                    description: Some(
+                        "Sends a {message} to a slack {channel} with an optional {preview}"
+                            .to_string(),
+                    ),
+                    parameters: Some(variable_schema_gen(json!({
+                        "type": "object",
+                        "properties": {
+                            "channel": {
+                                "type": "string",
+                                "description": "The channel where the message should be sent",
+                            },
+                            "message": {
+                                "type": "string",
+                                "description": "The message to be sent",
+                            },
+                            "preview": {
+                                "type": "string",
+                                "description": "Whether or not to include the link preview",
+                            },
+                        },
+                        "required": ["channel", "message", "preview"],
+                        "additionalProperties": false,
+                    }), vec![])),
+                    strict: Some(true),
+                })
+                .r#type(ChatCompletionToolType::Function)
+                .build()
+                .unwrap(),
+        ];
+
+        let basic_planner = BasicPlanner::new(tools.clone());
+
+        let client = LlmClient::openai();
+        // let client = LlmClient::local_llama31();
+
+        // Build a system message
+        let system_request = ChatCompletionRequestSystemMessageArgs::default()
+            .content(system_message)
+            .build()
+            .unwrap()
+            .into();
+        let user_message = ChatCompletionRequestUserMessageArgs::default()
+            .content("Write a summary of my 5 most recent emails and send it to me as private Slack message.")
+            .build()
+            .unwrap()
+            .into();
+
+        let state: crate::State = ConversationHistory(vec![system_request, user_message]);
+        let chat_request = client.chat(state.0.clone(), tools);
+        let current_message = chat_request.await.unwrap().choices[0].message.clone();
+
+        let mut planning_loop = PlanningLoop::new(
+            basic_planner,
+            client,
+            vec![
+                Function("read_emails".to_string()),
+                Function("send_slack_message".to_string()),
+            ],
+        );
+
+        let mut datastore = crate::Datastore;
+        let response = planning_loop
+            .run(state, &mut datastore, crate::Message::Chat(current_message))
+            .await
+            .expect("Failed to run");
+        println!("{response:#?}");
+    }
+
+    #[tokio::test]
+    async fn var_planner() {
+        use crate::{
+            ConversationHistory, Function,
+            plan::{PlanningLoop, VarPlanner},
         };
         use async_openai::types::{
             ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
@@ -204,7 +321,6 @@ mod tests {
                 .unwrap(),
         ];
 
-        let _basic_planner = BasicPlanner::new(tools.clone());
         let var_planner = VarPlanner::new(tools.clone());
 
         let client = LlmClient::openai();
