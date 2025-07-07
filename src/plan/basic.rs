@@ -1,13 +1,9 @@
-use crate::{
-    Action, Args, Function, Message, State,
-};
-use async_openai::{
-    types::{
-        ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestToolMessageArgs,
-        ChatCompletionRequestUserMessageArgs, ChatCompletionTool, FunctionCall, Role,
-    },
-};
 use super::{Plan, PlanError};
+use crate::{Action, Args, Function, Message, State};
+use async_openai::types::{
+    ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestToolMessageArgs,
+    ChatCompletionRequestUserMessageArgs, ChatCompletionTool, FunctionCall, Role,
+};
 
 /// A planner that takes a set of actions given an arraty of tools
 pub struct BasicPlanner {
@@ -142,4 +138,3 @@ impl Plan<Message> for BasicPlanner {
         Ok((new_state, action))
     }
 }
-

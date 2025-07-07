@@ -1,8 +1,8 @@
-mod plan_loop;
 mod basic;
+mod plan_loop;
 
-pub use plan_loop::PlanningLoop;
 pub use basic::BasicPlanner;
+pub use plan_loop::PlanningLoop;
 
 use crate::{
     Action, Args, Function, Message, State,
