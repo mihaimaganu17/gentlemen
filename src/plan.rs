@@ -152,10 +152,18 @@ impl VarPlanner {
         for (arg_name, value) in map.into_iter() {
             match value {
                 Value::Object(kind_map) => {
-                    match kind_map.get("kind").ok_or(PlanError::InvalidObjectKey("kind".to_string()))?.as_str() {
-                        Some("value") => {
-                            new_args.insert(arg_name, kind_map.get("value").ok_or(PlanError::InvalidObjectKey("value".to_string()))?.clone())
-                        }
+                    match kind_map
+                        .get("kind")
+                        .ok_or(PlanError::InvalidObjectKey("kind".to_string()))?
+                        .as_str()
+                    {
+                        Some("value") => new_args.insert(
+                            arg_name,
+                            kind_map
+                                .get("value")
+                                .ok_or(PlanError::InvalidObjectKey("value".to_string()))?
+                                .clone(),
+                        ),
                         Some("variable") => todo!(),
                         Some(kind) => panic!("{}", format!("Invalid kind argument {kind}")),
                         None => panic!("kind field is missing"),
