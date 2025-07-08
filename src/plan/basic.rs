@@ -4,6 +4,7 @@ use async_openai::types::{
     ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestToolMessageArgs,
     ChatCompletionRequestUserMessageArgs, ChatCompletionTool, FunctionCall, Role,
 };
+use serde_json::{Map, Value};
 
 /// A planner that takes a set of actions given an arraty of tools
 pub struct BasicPlanner {
@@ -14,6 +15,31 @@ impl BasicPlanner {
     /// Create a new [`BasicPlanner`] given an array of `tools`
     pub fn new(tools: Vec<ChatCompletionTool>) -> Self {
         Self { tools }
+    }
+
+    pub fn normalize_args(&self, args: String) -> String {
+        let args = serde_json::from_str(&args).unwrap();
+        let Value::Object(map) = args else {
+            return "Mata".to_string();
+        };
+        let mut new_args = Map::new();
+
+        for (arg_name, value) in map.into_iter() {
+            match value {
+                Value::Object(kind_map) => {
+                    match kind_map.get("kind").unwrap().as_str() {
+                        Some("value") => {
+                            new_args.insert(arg_name, kind_map.get("value").unwrap().clone())
+                        }
+                        Some("variable") => todo!(),
+                        Some(kind) => panic!("{}", format!("Invalid kind argument {kind}")),
+                        None => panic!("kind field is missing"),
+                    };
+                }
+                _ => panic!("Invalid argument schema {value:#?}"),
+            }
+        }
+        serde_json::to_string(&Value::Object(new_args)).unwrap()
     }
 }
 
@@ -76,6 +102,10 @@ impl Plan<Message> for BasicPlanner {
                             assert!(tool_calls.len() == 1);
                             // Get the name and argument of the first tool call.
                             let FunctionCall { name, arguments } = tool_calls[0].clone().function;
+
+                            // Normalize arguments such that we could parse them in their correct
+                            // function input
+                            let arguments = self.normalize_args(arguments);
 
                             // Convert the message to a request to update the state
                             let conv_message = ChatCompletionRequestAssistantMessageArgs::default()

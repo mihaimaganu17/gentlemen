@@ -180,7 +180,6 @@ mod tests {
         let basic_planner = BasicPlanner::new(tools.clone());
 
         let client = LlmClient::openai();
-        // let client = LlmClient::local_llama31();
 
         // Build a system message
         let system_request = ChatCompletionRequestSystemMessageArgs::default()

@@ -147,7 +147,6 @@ impl Plan<Message> for VarPlanner {
     type Error = PlanError;
     fn plan(&mut self, state: State, message: Message) -> Result<(State, Action), Self::Error> {
         let mut new_state = state;
-        println!("message {:#?}", message);
         let (new_state, action) = match message {
             Message::Chat(message) => {
                 let role = message.role;
@@ -225,7 +224,6 @@ impl Plan<Message> for VarPlanner {
                 }
             }
             Message::ToolResult(content, id) => {
-                println!("{content:#?} {id:#?}");
                 let x = Variable::fresh();
                 self.memory.insert(x.clone(), content);
                 let conv_message = ChatCompletionRequestToolMessageArgs::default()
