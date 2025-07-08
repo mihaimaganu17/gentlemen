@@ -6,7 +6,7 @@ use async_openai::types::{
 };
 use serde_json::{Map, Value};
 
-/// A planner that takes a set of actions given an arraty of tools
+/// A planner that takes a set of actions given an array of tools
 pub struct BasicPlanner {
     tools: Vec<ChatCompletionTool>,
 }
@@ -17,19 +17,28 @@ impl BasicPlanner {
         Self { tools }
     }
 
-    pub fn normalize_args(&self, args: String) -> String {
-        let args = serde_json::from_str(&args).unwrap();
+    /// Normalize the arguments passed by the LLM. The LLM is instructed to pass a specific schema
+    /// for the function arguments such that it could be distinguished which arguments are
+    /// `variables` which have to be queried by internal memory and which are plain variables which
+    /// only need to be passed to the function call. Each argument type is specified in the `kind`
+    /// field and the `value` field holds the actual value of the argument
+    pub fn normalize_args(&self, args: String) -> Result<String, PlanError> {
+        // Convert the arguments to a [`serder_json::Value`]
+        let args = serde_json::from_str(&args)?;
+
+        // If the arguments are not an object, in other words a json dictionary
         let Value::Object(map) = args else {
-            return "Mata".to_string();
+            // We do not support it and return an error
+            return Err(PlanError::ArgumentNotObject(args));
         };
         let mut new_args = Map::new();
 
         for (arg_name, value) in map.into_iter() {
             match value {
                 Value::Object(kind_map) => {
-                    match kind_map.get("kind").unwrap().as_str() {
+                    match kind_map.get("kind").ok_or(PlanError::InvalidObjectKey("kind".to_string()))?.as_str() {
                         Some("value") => {
-                            new_args.insert(arg_name, kind_map.get("value").unwrap().clone())
+                            new_args.insert(arg_name, kind_map.get("value").ok_or(PlanError::InvalidObjectKey("value".to_string()))?.clone())
                         }
                         Some("variable") => todo!(),
                         Some(kind) => panic!("{}", format!("Invalid kind argument {kind}")),
@@ -39,7 +48,7 @@ impl BasicPlanner {
                 _ => panic!("Invalid argument schema {value:#?}"),
             }
         }
-        serde_json::to_string(&Value::Object(new_args)).unwrap()
+        Ok(serde_json::to_string(&Value::Object(new_args))?)
     }
 }
 
@@ -121,7 +130,7 @@ impl Plan<Message> for BasicPlanner {
                             // the tool result.
                             let action = Action::MakeCall(
                                 Function(name),
-                                Args(arguments),
+                                Args(arguments?),
                                 tool_calls[0].clone().id,
                             );
                             (new_state, action)

@@ -26,6 +26,7 @@ pub trait Plan<M> {
     fn plan(&mut self, state: State, message: M) -> Result<(State, Action), Self::Error>;
 }
 
+/// Error issued by either one of the planners which implement [`Plan`] or the [`PlanningLoop`]
 #[derive(Debug)]
 pub enum PlanError {
     NoUserContent,
@@ -34,11 +35,20 @@ pub enum PlanError {
     NoFunctionCall,
     CannotPlan(String),
     OpenAIError(OpenAIError),
+    ArgumentNotObject(Value),
+    SerdeJsonError(serde_json::Error),
+    InvalidObjectKey(String),
 }
 
 impl From<OpenAIError> for PlanError {
     fn from(err: OpenAIError) -> Self {
         Self::OpenAIError(err)
+    }
+}
+
+impl From<serde_json::Error> for PlanError {
+    fn from(err: serde_json::Error) -> Self {
+        Self::SerdeJsonError(err)
     }
 }
 
@@ -104,12 +114,18 @@ impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
 }
 */
 
+/// A planner that takes a set of actions given an array of tools. It does not returns tool results
+/// directly to the LLM, but rather it uses internal `memory` to map tool results to variables and
+/// then when queried about a variable ID, it returns the matching tool result
 pub struct VarPlanner {
+    // Set of tools the LLM could choose to call.
     tools: Vec<ChatCompletionTool>,
+    // Memory mapping variable names to tool results from tool calls
     memory: Memory,
 }
 
 impl VarPlanner {
+    /// Create a new [`VarPlanner`] with the given `tools` and empty memory
     pub fn new(tools: Vec<ChatCompletionTool>) -> Self {
         Self {
             tools,
@@ -117,19 +133,28 @@ impl VarPlanner {
         }
     }
 
-    pub fn normalize_args(&self, args: String) -> String {
-        let args = serde_json::from_str(&args).unwrap();
+    /// Normalize the arguments passed by the LLM. The LLM is instructed to pass a specific schema
+    /// for the function arguments such that it could be distinguished which arguments are
+    /// `variables` which have to be queried by internal memory and which are plain variables which
+    /// only need to be passed to the function call. Each argument type is specified in the `kind`
+    /// field and the `value` field holds the actual value of the argument
+    pub fn normalize_args(&self, args: String) -> Result<String, PlanError> {
+        // Convert the arguments to a [`serder_json::Value`]
+        let args = serde_json::from_str(&args)?;
+
+        // If the arguments are not an object, in other words a json dictionary
         let Value::Object(map) = args else {
-            return "Mata".to_string();
+            // We do not support it and return an error
+            return Err(PlanError::ArgumentNotObject(args));
         };
         let mut new_args = Map::new();
 
         for (arg_name, value) in map.into_iter() {
             match value {
                 Value::Object(kind_map) => {
-                    match kind_map.get("kind").unwrap().as_str() {
+                    match kind_map.get("kind").ok_or(PlanError::InvalidObjectKey("kind".to_string()))?.as_str() {
                         Some("value") => {
-                            new_args.insert(arg_name, kind_map.get("value").unwrap().clone())
+                            new_args.insert(arg_name, kind_map.get("value").ok_or(PlanError::InvalidObjectKey("value".to_string()))?.clone())
                         }
                         Some("variable") => todo!(),
                         Some(kind) => panic!("{}", format!("Invalid kind argument {kind}")),
@@ -139,7 +164,7 @@ impl VarPlanner {
                 _ => panic!("Invalid argument schema {value:#?}"),
             }
         }
-        serde_json::to_string(&Value::Object(new_args)).unwrap()
+        Ok(serde_json::to_string(&Value::Object(new_args))?)
     }
 }
 
@@ -176,7 +201,7 @@ impl Plan<Message> for VarPlanner {
                         if let Some(ref tool_calls) = message.tool_calls {
                             let FunctionCall { name, arguments } = tool_calls[0].clone().function;
                             let action = if name == "read_variable" {
-                                let variable = self.normalize_args(arguments);
+                                let variable = self.normalize_args(arguments)?;
                                 let result = self
                                     .memory
                                     .get(&serde_json::from_str(&variable).unwrap())
@@ -203,7 +228,7 @@ impl Plan<Message> for VarPlanner {
                                 new_state.0.push(conv_message);
                                 Action::MakeCall(
                                     Function(name),
-                                    Args(self.normalize_args(arguments)),
+                                    Args(self.normalize_args(arguments)?),
                                     tool_calls[0].clone().id,
                                 )
                             };
