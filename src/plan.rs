@@ -38,6 +38,9 @@ pub enum PlanError {
     ArgumentNotObject(Value),
     SerdeJsonError(serde_json::Error),
     InvalidObjectKey(String),
+    InvalidArgumentKind(String),
+    ArgumentMissingKind(String),
+    InvalidArgumentSchema(Value),
 }
 
 impl From<OpenAIError> for PlanError {
@@ -147,16 +150,22 @@ impl VarPlanner {
             // We do not support it and return an error
             return Err(PlanError::ArgumentNotObject(args));
         };
+
+        // Create a new [`Map`] that will hold the arguments in their normalized form
         let mut new_args = Map::new();
 
+        // For each argument
         for (arg_name, value) in map.into_iter() {
             match value {
+                // If we have another map representing the argument
                 Value::Object(kind_map) => {
+                    // Check its kind
                     match kind_map
                         .get("kind")
                         .ok_or(PlanError::InvalidObjectKey("kind".to_string()))?
                         .as_str()
                     {
+                        // If it is a value we take the value as is
                         Some("value") => new_args.insert(
                             arg_name,
                             kind_map
@@ -164,14 +173,22 @@ impl VarPlanner {
                                 .ok_or(PlanError::InvalidObjectKey("value".to_string()))?
                                 .clone(),
                         ),
+                        // If it is a variable, we need to query it in the internal [`Memory`].
+                        // However this is an interesting case as currently the LLM does not listen
+                        // to our instructions and never returns a `kind: variable` value.
                         Some("variable") => todo!(),
-                        Some(kind) => panic!("{}", format!("Invalid kind argument {kind}")),
-                        None => panic!("kind field is missing"),
+                        // Any other kind value is an error
+                        Some(kind) => return Err(PlanError::InvalidArgumentKind(kind.to_string())),
+                        // If the kind field is missing, we return an error
+                        None => return Err(PlanError::ArgumentMissingKind(arg_name)),
                     };
                 }
-                _ => panic!("Invalid argument schema {value:#?}"),
+                // If the argument schema is no a map (dict) we consider it invalid
+                _ => return Err(PlanError::InvalidArgumentSchema(value)),
             }
         }
+
+        // Convert the new map into a string and return it
         Ok(serde_json::to_string(&Value::Object(new_args))?)
     }
 }
