@@ -1,10 +1,10 @@
 mod basic;
-mod var;
 mod plan_loop;
+mod var;
 
 pub use basic::BasicPlanner;
-pub use var::VarPlanner;
 pub use plan_loop::PlanningLoop;
+pub use var::VarPlanner;
 
 use crate::{Action, State};
 use async_openai::error::OpenAIError;
@@ -110,7 +110,6 @@ impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
     }
 }
 */
-
 
 /*
 pub struct TaintTrackingPlanner {
