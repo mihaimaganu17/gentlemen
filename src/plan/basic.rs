@@ -107,7 +107,7 @@ impl Plan<Message> for BasicPlanner {
                         // can match the tool call with the tool result.
                         let conv_message = ChatCompletionRequestToolMessageArgs::default()
                             .content(message.content.ok_or(PlanError::NoToolContent)?)
-                            .tool_call_id(message.tool_calls.unwrap()[0].id.clone())
+                            .tool_call_id(message.tool_calls.ok_or(PlanError::NoToolCalls)?[0].id.clone())
                             .build()?
                             .into();
                         // Update the state with the new message
