@@ -1,3 +1,6 @@
+//! Module defining and implementing `VarPlanner` which is an action planner with internal memory
+//! capable of mapping variables to tool call results, allowing for 1 level of indirection between
+//! the LLM tool calling messages and the execution / retrieval of tool results from the caller.
 use super::{Plan, PlanError};
 use crate::{
     Action, Args, Function, Message, State,
