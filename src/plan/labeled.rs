@@ -1,13 +1,13 @@
-use crate::{Datastore, Plan, PlanningLoop, Function, Arg, ConversationHistory, Action, Message,
-    Confidentiality, Integrity, ProductLattice, Label, LabeledMessage, Args,
-    plan::PlanError,
+use crate::{
+    Action, Arg, Args, Confidentiality, ConversationHistory, Datastore, Function, Integrity, Label,
+    LabeledMessage, Message, Plan, PlanningLoop, ProductLattice, plan::PlanError,
 };
 use async_openai::types::ChatCompletionRequestMessage;
 
 #[derive(Clone)]
 pub struct LabeledConversationHistory<M> {
-    conv: ConversationHistory<M>,
-    label: Label,
+    _conv: ConversationHistory<M>,
+    _label: Label,
 }
 
 type LabeledState = LabeledConversationHistory<ChatCompletionRequestMessage>;
@@ -40,7 +40,7 @@ pub struct LabeledFunction {
 pub struct Policy;
 
 impl Policy {
-    fn is_allowed(&self, _action: &LabeledAction) -> bool {
+    fn _is_allowed(&self, _action: &LabeledAction) -> bool {
         true
     }
 }
@@ -49,8 +49,11 @@ impl LabeledFunction {
     // A function reads from and writes to a global datastore. This allows for interaction between
     // tools and capture side effects through update to the datastore.
     // Currently in this model we return an updated datastore.
-    pub fn call(&self, args: LabeledArgs, datastore: &mut Datastore) -> String {
-        self.function.call(Args(args.0.iter().map(|x| x.arg.to_string()).collect()), datastore)
+    pub fn _call(&self, args: LabeledArgs, datastore: &mut Datastore) -> String {
+        self.function.call(
+            Args(args.0.iter().map(|x| x.arg.to_string()).collect()),
+            datastore,
+        )
     }
 }
 
@@ -62,24 +65,18 @@ impl<P: Plan<LabeledState, LabeledMessage>> PlanningLoop<LabeledState, LabeledMe
         state: LabeledState,
         datastore: &mut Datastore,
         message: LabeledMessage,
-        policy: Policy,
+        _policy: Policy,
     ) -> Result<String, PlanError> {
         let mut current_message = message;
         let mut current_state = state;
         loop {
             let action;
-            (current_state, action) = self.planner_mut().plan(current_state, current_message.clone())
+            (current_state, action) = self
+                .planner_mut()
+                .plan(current_state, current_message.clone())
                 .map_err(|e| PlanError::CannotPlan(format!("{:?}", e)))?;
             match action {
-                Action::Query(conv_history, tools) => {
-                    /*
-                    let new_message = self.model.map(conv_history, tools);
-                    // TODO: Create label for this message
-                    current_message = LabeledMessage {
-                        message: new_message,
-                        label: Label,
-                    }
-                    */
+                Action::Query(_conv_history, _tools) => {
                     todo!()
                 }
                 Action::MakeCall(ref function, ref args, id) => {
@@ -105,4 +102,3 @@ impl<P: Plan<LabeledState, LabeledMessage>> PlanningLoop<LabeledState, LabeledMe
         }
     }
 }
-

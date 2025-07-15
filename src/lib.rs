@@ -4,11 +4,11 @@ pub mod openai;
 mod plan;
 pub mod tools;
 
-pub use ifc::{Confidentiality, Integrity, ProductLattice, Label};
+pub use ifc::{Confidentiality, Integrity, Label, ProductLattice};
 pub use message::{LabeledMessage, Message};
 pub use plan::{BasicPlanner, Plan, PlanningLoop, VarPlanner};
-use tools::{ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack_message};
 use std::fmt;
+use tools::{ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack_message};
 
 // use plan::Variable;
 use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
@@ -55,7 +55,7 @@ pub enum Arg {
 impl fmt::Display for Arg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Basic(value) => write!(f, "{}", value)
+            Self::Basic(value) => write!(f, "{}", value),
         }
     }
 }

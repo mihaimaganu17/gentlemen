@@ -1,7 +1,7 @@
 mod basic;
+mod labeled;
 mod plan_loop;
 mod var;
-mod labeled;
 
 pub use basic::BasicPlanner;
 pub use plan_loop::PlanningLoop;
