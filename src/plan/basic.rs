@@ -70,7 +70,7 @@ impl BasicPlanner {
     }
 }
 
-impl Plan<Message> for BasicPlanner {
+impl Plan<State, Message> for BasicPlanner {
     type Error = PlanError;
 
     /// Take and process a previous known `state` and the current `message` and returns a new state

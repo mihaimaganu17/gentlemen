@@ -89,7 +89,7 @@ impl VarPlanner {
     }
 }
 
-impl Plan<Message> for VarPlanner {
+impl Plan<State, Message> for VarPlanner {
     type Error = PlanError;
     fn plan(
         &mut self,

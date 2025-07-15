@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 /// Planning loop orchestrates the communication with the model and handles the `Planner`'s
 /// required actions.
-pub struct PlanningLoop<M: Clone, P: Plan<M>> {
+pub struct PlanningLoop<S, M: Clone, P: Plan<S, M>> {
     // The planner used to plan the next action in the loop
     planner: P,
     // The LLM model used to accomplish the task
@@ -12,16 +12,19 @@ pub struct PlanningLoop<M: Clone, P: Plan<M>> {
     // The tools the LLM model has access to
     tools: Vec<Function>,
     // Phantom data such that we can bind the type of `Message` that the planner `P` uses
-    phantom: PhantomData<M>,
+    phantom_message: PhantomData<M>,
+    phantom_state: PhantomData<S>,
 }
 
-impl<M: Clone, P: Plan<M>> PlanningLoop<M, P> {
+impl<S, M: Clone, P: Plan<S, M>> PlanningLoop<S, M, P> {
     pub fn planner_mut(&mut self) -> &mut P {
         &mut self.planner
     }
-}
 
-impl<P: Plan<Message>> PlanningLoop<Message, P> {
+    pub fn tools(&mut self) -> &[Function] {
+        self.tools.as_ref()
+    }
+
     /// Create a new `PlanninLoop` with an action `planner` a `model` to do the work and available
     /// `tools` that the model can call
     pub fn new(planner: P, model: LlmClient, tools: Vec<Function>) -> Self {
@@ -29,9 +32,13 @@ impl<P: Plan<Message>> PlanningLoop<Message, P> {
             planner,
             model,
             tools,
-            phantom: PhantomData,
+            phantom_message: PhantomData,
+            phantom_state: PhantomData,
         }
     }
+}
+
+impl<P: Plan<State, Message>> PlanningLoop<State, Message, P> {
     /// The entry point for executing the `PlanningLoop`. At each iteration of the loop, the
     /// current `state`, the latest `message` of the conversation and the `datastore` are passed.
     pub async fn run(

@@ -1,5 +1,6 @@
-use crate::{Datastore, Plan, PlanningLoop, Function, Arg, ConversationHistory,
+use crate::{Datastore, Plan, PlanningLoop, Function, Arg, ConversationHistory, Action, Message,
     Confidentiality, Integrity, ProductLattice, Label, LabeledMessage, Args,
+    plan::PlanError,
 };
 use async_openai::types::ChatCompletionRequestMessage;
 
@@ -53,7 +54,7 @@ impl LabeledFunction {
     }
 }
 
-impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
+impl<P: Plan<LabeledState, LabeledMessage>> PlanningLoop<LabeledState, LabeledMessage, P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
     pub fn run_with_policy(
@@ -62,14 +63,15 @@ impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
         datastore: &mut Datastore,
         message: LabeledMessage,
         policy: Policy,
-    ) -> String {
+    ) -> Result<String, PlanError> {
         let mut current_message = message;
         let mut current_state = state;
         loop {
             let action;
-            (current_state, action) = self.planner_mut().plan(current_state, current_message.clone());
+            (current_state, action) = self.planner_mut().plan(current_state, current_message.clone())
+                .map_err(|e| PlanError::CannotPlan(format!("{:?}", e)))?;
             match action {
-                LabeledAction::Query(conv_history, tools) => {
+                Action::Query(conv_history, tools) => {
                     /*
                     let new_message = self.model.map(conv_history, tools);
                     // TODO: Create label for this message
@@ -80,25 +82,25 @@ impl<P: Plan<LabeledMessage>> PlanningLoop<LabeledMessage, P> {
                     */
                     todo!()
                 }
-                LabeledAction::MakeCall(ref function, ref args) => {
+                Action::MakeCall(ref function, ref args, id) => {
                     // Here both `function` and `args` have a label
-                    if !policy.is_allowed(&action) {
+                    /*if !policy.is_allowed(&action) {
                         // Do not perform the action
                         continue;
-                    }
+                    }*/
                     let tool_result = self
-                        .tools
+                        .tools()
                         .iter()
                         .find(|&f| f == function)
                         .unwrap()
                         .call(args.clone(), datastore);
                     // TODO: Create label for this message
                     current_message = LabeledMessage {
-                        message: tool_result,
+                        message: Message::ToolResult(tool_result, id),
                         label: ProductLattice::new(Confidentiality::low(), Integrity::untrusted()),
                     }
                 }
-                LabeledAction::Finish(result) => return result,
+                Action::Finish(result) => return Ok(result),
             }
         }
     }
