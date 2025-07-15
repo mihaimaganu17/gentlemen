@@ -4,28 +4,16 @@ pub mod openai;
 mod plan;
 pub mod tools;
 
-pub use ifc::{Confidentiality, Integrity, ProductLattice};
+pub use ifc::{Confidentiality, Integrity, ProductLattice, Label};
 pub use message::{LabeledMessage, Message};
 pub use plan::{BasicPlanner, Plan, PlanningLoop, VarPlanner};
 use tools::{ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack_message};
+use std::fmt;
 
 // use plan::Variable;
 use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
 
 pub struct Datastore;
-
-#[derive(PartialEq, Clone)]
-pub struct Label;
-
-pub type Label1 = ProductLattice<Confidentiality, Integrity>;
-
-pub struct Policy;
-
-impl Policy {
-    fn _is_allowed(&self, _action: &Action) -> bool {
-        true
-    }
-}
 
 // This should also be a trait
 #[derive(PartialEq, Clone)]
@@ -53,10 +41,6 @@ impl Function {
             _ => panic!("{:?}", self.0),
         }
     }
-
-    fn _name(&self) -> &str {
-        "Anonym"
-    }
 }
 
 #[derive(Clone)]
@@ -66,6 +50,14 @@ pub struct Args(pub String);
 pub enum Arg {
     Basic(String),
     //Variable(Variable),
+}
+
+impl fmt::Display for Arg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Basic(value) => write!(f, "{}", value)
+        }
+    }
 }
 
 // Comprises all the messages in the conversation up to the current point
@@ -89,94 +81,6 @@ pub enum Action {
     // Finish the conversation and respond to the user.
     Finish(String),
 }
-
-/*
-// This should also be a trait
-#[derive(PartialEq, Clone)]
-pub struct LabeledFunction {
-    function: Function,
-    label: Label,
-}
-
-impl LabeledFunction {
-    // A function reads from and writes to a global datastore. This allows for interaction between
-    // tools and capture side effects through update to the datastore.
-    // Currently in this model we return an updated datastore.
-    pub fn call(&self, args: Args, datastore: &mut Datastore) -> LabeledMessage {
-        LabeledMessage {
-            message: self.function.call(args, datastore),
-            label: Label,
-        }
-    }
-
-    fn format_vars(&self, _variables: Vec<&Variable>) -> Self {
-        todo!()
-    }
-
-    fn name(&self) -> &str {
-        "Anonym"
-    }
-}
-
-#[derive(Clone)]
-pub struct ArgsTemp(Vec<Arg>);
-*/
-
-/*
-impl TryFrom<Arg> for Variable {
-    type Error = ConversionError;
-
-    fn try_from(value: Arg) -> Result<Self, Self::Error> {
-        match value {
-            Arg::Variable(var) => Ok(var),
-            _ => Err(ConversionError::ArgIsNotVariable),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct LabeledArgs(Vec<LabeledArg>);
-
-#[derive(Clone)]
-pub struct LabeledArg {
-    arg: Arg,
-    label: Label,
-}
-*/
-
-/*
-pub enum LabeledAction<M> {
-    // Query the model with a specific conversation history and available tools
-    Query(LabeledConversationHistory<M>, Vec<LabeledFunction>),
-    // Call a `Tool` with `Args`
-    MakeCall(LabeledFunction, LabeledArgs),
-    // Finish the conversation and respond to the user.
-    Finish(String),
-}
-*/
-
-/*
-#[derive(Clone)]
-pub struct LabeledConversationHistory<M> {
-    conv: ConversationHistory<M>,
-    label: Label,
-}
-
-// Model is a mapping between a sequence of messages and tool declarations to either a tool call or
-// a response. This should be a trait
-pub struct Model;
-
-impl Model {
-    pub fn map(
-        &self,
-        _conv_history: ConversationHistory<Message>,
-        _tools: Vec<Function>,
-    ) -> Message {
-        // This should be either a tool call or an Assitant message
-        todo!()
-    }
-}
-*/
 
 pub enum TaskType {
     DataDependent,

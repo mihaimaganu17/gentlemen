@@ -1,13 +1,13 @@
 use std::{cmp::Ordering, collections::HashSet, hash::Hash};
 
-pub trait Lattice: PartialOrd + Sized {
+pub trait Lattice: PartialOrd + Sized + Clone {
     /// Returns the least upper bound between `self` and `other` values
     fn join(self, other: Self) -> Option<Self>;
     /// Returns the greatest lower bound between `self` and `other` values
     fn meet(self, other: Self) -> Option<Self>;
 }
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Confidentiality {
     // Public information
     Low = 0,
@@ -35,7 +35,7 @@ impl Confidentiality {
     }
 }
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Integrity {
     // Low integrity
     Untrusted = 0,
@@ -63,7 +63,8 @@ impl Integrity {
     }
 }
 
-#[derive(Debug, PartialEq)]
+// Information lattice corresponding to the product of 2 other lattices
+#[derive(Debug, PartialEq, Clone)]
 pub struct ProductLattice<A: Lattice, B: Lattice> {
     lattice1: A,
     lattice2: B,
@@ -76,10 +77,12 @@ impl<A: Lattice, B: Lattice> PartialOrd for ProductLattice<A, B> {
         if ord1 == ord2 {
             // If the 2 are equal, we return the result
             Some(ord1)
+        // If at least one is smaller than the other and the other is equal, we return `Less`
         } else if ord1 == Ordering::Less && ord2 == Ordering::Equal
             || ord1 == Ordering::Equal && ord2 == Ordering::Less
         {
             Some(Ordering::Less)
+        // Otherwise greater
         } else {
             Some(Ordering::Greater)
         }
@@ -110,7 +113,7 @@ impl<A: Lattice, B: Lattice> ProductLattice<A, B> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct PowersetLattice<T: Eq + Hash> {
     subset: HashSet<T>,
     universe: HashSet<T>,
@@ -160,3 +163,5 @@ impl<T: Eq + Hash + Clone> Lattice for PowersetLattice<T> {
 pub enum LatticeError {
     SubsetNotInUniverse,
 }
+
+pub type Label = ProductLattice<Confidentiality, Integrity>;

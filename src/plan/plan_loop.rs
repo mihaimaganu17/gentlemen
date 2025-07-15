@@ -15,6 +15,12 @@ pub struct PlanningLoop<M: Clone, P: Plan<M>> {
     phantom: PhantomData<M>,
 }
 
+impl<M: Clone, P: Plan<M>> PlanningLoop<M, P> {
+    pub fn planner_mut(&mut self) -> &mut P {
+        &mut self.planner
+    }
+}
+
 impl<P: Plan<Message>> PlanningLoop<Message, P> {
     /// Create a new `PlanninLoop` with an action `planner` a `model` to do the work and available
     /// `tools` that the model can call
