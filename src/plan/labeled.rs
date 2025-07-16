@@ -1,6 +1,7 @@
 use crate::{
     Action, Arg, Args, Confidentiality, ConversationHistory, Datastore, Function, Integrity, Label,
     LabeledMessage, Message, Plan, PlanningLoop, ProductLattice, plan::PlanError, tools::Memory,
+    Call
 };
 use async_openai::types::ChatCompletionRequestMessage;
 
@@ -37,6 +38,16 @@ pub struct LabeledFunction {
     label: Label,
 }
 
+impl Call for LabeledFunction {
+    type Args = LabeledArgs;
+    // A function reads from and writes to a global datastore. This allows for interaction between
+    // tools and capture side effects through update to the datastore.
+    // Currently in this model we return an updated datastore.
+    fn call(&self, args: Self::Args, _datastore: &mut Datastore) -> String {
+        todo!()
+    }
+}
+
 pub struct Policy;
 
 impl Policy {
@@ -57,7 +68,7 @@ impl LabeledFunction {
     }
 }
 
-impl<P: Plan<LabeledState, LabeledMessage, Action=LabeledAction>> PlanningLoop<LabeledState, LabeledMessage, P> {
+impl<P: Plan<LabeledState, LabeledMessage, Action=LabeledAction>> PlanningLoop<LabeledState, LabeledMessage, LabeledFunction, P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
     pub fn run_with_policy(

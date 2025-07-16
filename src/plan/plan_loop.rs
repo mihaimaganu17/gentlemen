@@ -1,33 +1,33 @@
 use super::{Plan, PlanError};
-use crate::{Action, Datastore, Function, Message, State, openai::LlmClient};
+use crate::{Action, Datastore, Function, Message, State, openai::LlmClient, Call};
 use std::marker::PhantomData;
 
 /// Planning loop orchestrates the communication with the model and handles the `Planner`'s
 /// required actions.
-pub struct PlanningLoop<S, M: Clone, P: Plan<S, M>> {
+pub struct PlanningLoop<S, M: Clone, F: Call, P: Plan<S, M>> {
     // The planner used to plan the next action in the loop
     planner: P,
     // The LLM model used to accomplish the task
     model: LlmClient,
     // The tools the LLM model has access to
-    tools: Vec<Function>,
+    tools: Vec<F>,
     // Phantom data such that we can bind the type of `Message` that the planner `P` uses
     phantom_message: PhantomData<M>,
     phantom_state: PhantomData<S>,
 }
 
-impl<S, M: Clone, P: Plan<S, M>> PlanningLoop<S, M, P> {
+impl<S, M: Clone, F: Call, P: Plan<S, M>> PlanningLoop<S, M, F, P> {
     pub fn planner_mut(&mut self) -> &mut P {
         &mut self.planner
     }
 
-    pub fn tools(&mut self) -> &[Function] {
+    pub fn tools(&mut self) -> &[F] {
         self.tools.as_ref()
     }
 
     /// Create a new `PlanninLoop` with an action `planner` a `model` to do the work and available
     /// `tools` that the model can call
-    pub fn new(planner: P, model: LlmClient, tools: Vec<Function>) -> Self {
+    pub fn new(planner: P, model: LlmClient, tools: Vec<F>) -> Self {
         Self {
             planner,
             model,
@@ -38,7 +38,7 @@ impl<S, M: Clone, P: Plan<S, M>> PlanningLoop<S, M, P> {
     }
 }
 
-impl<P: Plan<State, Message, Action=Action>> PlanningLoop<State, Message, P> {
+impl<P: Plan<State, Message, Action=Action>> PlanningLoop<State, Message, Function, P> {
     /// The entry point for executing the `PlanningLoop`. At each iteration of the loop, the
     /// current `state`, the latest `message` of the conversation and the `datastore` are passed.
     pub async fn run(
