@@ -90,12 +90,13 @@ impl VarPlanner {
 }
 
 impl Plan<State, Message> for VarPlanner {
+    type Action = Action;
     type Error = PlanError;
     fn plan(
         &mut self,
         state: State,
         caller_message: Message,
-    ) -> Result<(State, Action), Self::Error> {
+    ) -> Result<(State, Self::Action), Self::Error> {
         // TODO: Move these printlns to a logging module
         println!("{:#?}", caller_message);
         println!("{:#?}", self.memory);

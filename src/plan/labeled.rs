@@ -1,6 +1,6 @@
 use crate::{
     Action, Arg, Args, Confidentiality, ConversationHistory, Datastore, Function, Integrity, Label,
-    LabeledMessage, Message, Plan, PlanningLoop, ProductLattice, plan::PlanError,
+    LabeledMessage, Message, Plan, PlanningLoop, ProductLattice, plan::PlanError, tools::Memory,
 };
 use async_openai::types::ChatCompletionRequestMessage;
 
@@ -16,7 +16,7 @@ pub enum LabeledAction {
     // Query the model with a specific conversation history and available tools
     Query(LabeledState, Vec<LabeledFunction>),
     // Call a `Tool` with `Args`
-    MakeCall(LabeledFunction, LabeledArgs),
+    MakeCall(LabeledFunction, LabeledArgs, String),
     // Finish the conversation and respond to the user.
     Finish(String),
 }
@@ -57,7 +57,7 @@ impl LabeledFunction {
     }
 }
 
-impl<P: Plan<LabeledState, LabeledMessage>> PlanningLoop<LabeledState, LabeledMessage, P> {
+impl<P: Plan<LabeledState, LabeledMessage, Action=LabeledAction>> PlanningLoop<LabeledState, LabeledMessage, P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
     pub fn run_with_policy(
@@ -76,10 +76,10 @@ impl<P: Plan<LabeledState, LabeledMessage>> PlanningLoop<LabeledState, LabeledMe
                 .plan(current_state, current_message.clone())
                 .map_err(|e| PlanError::CannotPlan(format!("{:?}", e)))?;
             match action {
-                Action::Query(_conv_history, _tools) => {
+                LabeledAction::Query(_conv_history, _tools) => {
                     todo!()
                 }
-                Action::MakeCall(ref function, ref args, id) => {
+                LabeledAction::MakeCall(ref function, ref args, id) => {
                     // Here both `function` and `args` have a label
                     /*if !policy.is_allowed(&action) {
                         // Do not perform the action
@@ -97,8 +97,25 @@ impl<P: Plan<LabeledState, LabeledMessage>> PlanningLoop<LabeledState, LabeledMe
                         label: ProductLattice::new(Confidentiality::low(), Integrity::untrusted()),
                     }
                 }
-                Action::Finish(result) => return Ok(result),
+                LabeledAction::Finish(result) => return Ok(result),
             }
         }
+    }
+}
+
+pub struct TaintTrackingPlanner {
+    tools: Vec<Function>,
+    memory: Memory,
+    policy: Policy,
+}
+
+// Taint-tracking planner which is plugged into the `PlanningLoop`
+impl Plan<LabeledState, LabeledMessage> for TaintTrackingPlanner {
+    type Action = LabeledAction;
+    type Error = PlanError;
+    // Given a [`LabeledMessage`], a security policy and a [`LabeledState`], return an action with
+    // individually labeled components.
+    fn plan(&mut self, state: LabeledState, message: LabeledMessage) -> Result<(LabeledState, Self::Action), Self::Error> {
+        todo!()
     }
 }

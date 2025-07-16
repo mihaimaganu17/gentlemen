@@ -38,7 +38,7 @@ impl<S, M: Clone, P: Plan<S, M>> PlanningLoop<S, M, P> {
     }
 }
 
-impl<P: Plan<State, Message>> PlanningLoop<State, Message, P> {
+impl<P: Plan<State, Message, Action=Action>> PlanningLoop<State, Message, P> {
     /// The entry point for executing the `PlanningLoop`. At each iteration of the loop, the
     /// current `state`, the latest `message` of the conversation and the `datastore` are passed.
     pub async fn run(
