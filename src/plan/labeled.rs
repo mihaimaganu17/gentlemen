@@ -1,7 +1,7 @@
 use crate::{
-    Action, Arg, Args, Confidentiality, ConversationHistory, Datastore, Function, Integrity, Label,
-    LabeledMessage, Message, Plan, PlanningLoop, ProductLattice, plan::PlanError, tools::Memory,
-    Call
+    Arg, Args, Call, Confidentiality, ConversationHistory, Datastore, Function, Integrity,
+    Label, LabeledMessage, Message, Plan, PlanningLoop, ProductLattice, plan::PlanError,
+    tools::Memory,
 };
 use async_openai::types::ChatCompletionRequestMessage;
 
@@ -28,7 +28,7 @@ pub struct LabeledArgs(Vec<LabeledArg>);
 #[derive(Clone)]
 pub struct LabeledArg {
     arg: Arg,
-    label: Label,
+    _label: Label,
 }
 
 // This should also be a trait
@@ -43,7 +43,7 @@ impl Call for LabeledFunction {
     // A function reads from and writes to a global datastore. This allows for interaction between
     // tools and capture side effects through update to the datastore.
     // Currently in this model we return an updated datastore.
-    fn call(&self, args: Self::Args, _datastore: &mut Datastore) -> String {
+    fn call(&self, _args: Self::Args, _datastore: &mut Datastore) -> String {
         todo!()
     }
 }
@@ -68,7 +68,9 @@ impl LabeledFunction {
     }
 }
 
-impl<P: Plan<LabeledState, LabeledMessage, Action=LabeledAction>> PlanningLoop<LabeledState, LabeledMessage, LabeledFunction, P> {
+impl<P: Plan<LabeledState, LabeledMessage, Action = LabeledAction>>
+    PlanningLoop<LabeledState, LabeledMessage, LabeledFunction, P>
+{
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
     pub fn run_with_policy(
@@ -115,9 +117,9 @@ impl<P: Plan<LabeledState, LabeledMessage, Action=LabeledAction>> PlanningLoop<L
 }
 
 pub struct TaintTrackingPlanner {
-    tools: Vec<Function>,
-    memory: Memory,
-    policy: Policy,
+    _tools: Vec<Function>,
+    _memory: Memory,
+    _policy: Policy,
 }
 
 // Taint-tracking planner which is plugged into the `PlanningLoop`
@@ -126,7 +128,11 @@ impl Plan<LabeledState, LabeledMessage> for TaintTrackingPlanner {
     type Error = PlanError;
     // Given a [`LabeledMessage`], a security policy and a [`LabeledState`], return an action with
     // individually labeled components.
-    fn plan(&mut self, state: LabeledState, message: LabeledMessage) -> Result<(LabeledState, Self::Action), Self::Error> {
+    fn plan(
+        &mut self,
+        _state: LabeledState,
+        _message: LabeledMessage,
+    ) -> Result<(LabeledState, Self::Action), Self::Error> {
         todo!()
     }
 }

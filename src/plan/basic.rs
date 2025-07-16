@@ -76,7 +76,11 @@ impl Plan<State, Message> for BasicPlanner {
 
     /// Take and process a previous known `state` and the current `message` and returns a new state
     /// which contains the previous message and an action to be taken by the caller.
-    fn plan(&mut self, state: State, message: Message) -> Result<(State, Self::Action), Self::Error> {
+    fn plan(
+        &mut self,
+        state: State,
+        message: Message,
+    ) -> Result<(State, Self::Action), Self::Error> {
         // Bind the state to a mutable state such that we can update it.
         let mut new_state = state;
 

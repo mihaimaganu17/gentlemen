@@ -7,7 +7,6 @@ pub use basic::BasicPlanner;
 pub use plan_loop::PlanningLoop;
 pub use var::VarPlanner;
 
-use crate::Action;
 use async_openai::error::OpenAIError;
 use serde_json::Value;
 

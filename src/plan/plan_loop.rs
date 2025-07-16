@@ -1,5 +1,5 @@
 use super::{Plan, PlanError};
-use crate::{Action, Datastore, Function, Message, State, openai::LlmClient, Call};
+use crate::{Action, Call, Datastore, Function, Message, State, openai::LlmClient};
 use std::marker::PhantomData;
 
 /// Planning loop orchestrates the communication with the model and handles the `Planner`'s
@@ -38,7 +38,7 @@ impl<S, M: Clone, F: Call, P: Plan<S, M>> PlanningLoop<S, M, F, P> {
     }
 }
 
-impl<P: Plan<State, Message, Action=Action>> PlanningLoop<State, Message, Function, P> {
+impl<P: Plan<State, Message, Action = Action>> PlanningLoop<State, Message, Function, P> {
     /// The entry point for executing the `PlanningLoop`. At each iteration of the loop, the
     /// current `state`, the latest `message` of the conversation and the `datastore` are passed.
     pub async fn run(
