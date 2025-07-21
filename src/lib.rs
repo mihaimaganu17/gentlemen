@@ -1,80 +1,22 @@
 pub mod ifc;
 mod message;
+mod state;
 pub mod openai;
 mod plan;
 pub mod tools;
+pub mod function;
 
 pub use ifc::{Confidentiality, Integrity, Label, ProductLattice};
 pub use message::{LabeledMessage, Message};
 pub use plan::{BasicPlanner, Plan, PlanningLoop, VarPlanner};
+pub use state::{State, LabeledState, ConversationHistory, LabeledConversationHistory};
+pub use function::{Function, LabeledFunction, Args, LabeledArgs, Call};
 use std::fmt;
-use tools::{ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack_message};
 
 // use plan::Variable;
 use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
 
 pub struct Datastore;
-
-// This should also be a trait
-#[derive(PartialEq, Clone)]
-pub struct Function(String);
-
-pub trait Call {
-    type Args;
-    fn call(&self, args: Self::Args, _datastore: &mut Datastore) -> String;
-}
-
-impl Call for Function {
-    type Args = Args;
-    // A function reads from and writes to a global datastore. This allows for interaction between
-    // tools and capture side effects through update to the datastore.
-    // Currently in this model we return an updated datastore.
-    fn call(&self, args: Self::Args, _datastore: &mut Datastore) -> String {
-        match self.0.as_str() {
-            "read_emails" => {
-                // Convert args to desired type
-                let args: ReadEmailsArgs = serde_json::from_str(&args.0).unwrap();
-                let result = read_emails(args);
-                println!("{result:?}");
-                serde_json::to_string(&result).unwrap()
-            }
-            "send_slack_message" => {
-                let args: SendSlackMessageArgs = serde_json::from_str(&args.0).unwrap();
-                let result = send_slack_message(args);
-                println!("{result:?}");
-                serde_json::to_string(&result).unwrap()
-            }
-            _ => panic!("{:?}", self.0),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct Args(pub String);
-
-#[derive(Clone)]
-pub enum Arg {
-    Basic(String),
-    //Variable(Variable),
-}
-
-impl fmt::Display for Arg {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Basic(value) => write!(f, "{}", value),
-        }
-    }
-}
-
-// Comprises all the messages in the conversation up to the current point
-#[derive(Clone)]
-pub struct ConversationHistory<T>(Vec<T>);
-type State = ConversationHistory<ChatCompletionRequestMessage>;
-
-#[derive(Debug)]
-pub enum ConversionError {
-    ArgIsNotVariable,
-}
 
 pub enum Action {
     // Query the model with a specific conversation history and available tools

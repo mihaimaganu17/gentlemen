@@ -1,17 +1,10 @@
 use crate::{
-    Arg, Args, Call, Confidentiality, ConversationHistory, Datastore, Function, Integrity,
+    LabeledArgs, Call, Confidentiality, LabeledConversationHistory, LabeledState, LabeledFunction, Datastore, Integrity,
     Label, LabeledMessage, Message, Plan, PlanningLoop, ProductLattice, plan::PlanError,
     tools::Memory,
 };
-use async_openai::types::ChatCompletionRequestMessage;
-
-#[derive(Clone)]
-pub struct LabeledConversationHistory<M> {
-    _conv: ConversationHistory<M>,
-    _label: Label,
-}
-
-type LabeledState = LabeledConversationHistory<ChatCompletionRequestMessage>;
+use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
+use std::collections::HashMap;
 
 pub enum LabeledAction {
     // Query the model with a specific conversation history and available tools
@@ -22,31 +15,6 @@ pub enum LabeledAction {
     Finish(String),
 }
 
-#[derive(Clone)]
-pub struct LabeledArgs(Vec<LabeledArg>);
-
-#[derive(Clone)]
-pub struct LabeledArg {
-    arg: Arg,
-    _label: Label,
-}
-
-// This should also be a trait
-#[derive(PartialEq, Clone)]
-pub struct LabeledFunction {
-    function: Function,
-    label: Label,
-}
-
-impl Call for LabeledFunction {
-    type Args = LabeledArgs;
-    // A function reads from and writes to a global datastore. This allows for interaction between
-    // tools and capture side effects through update to the datastore.
-    // Currently in this model we return an updated datastore.
-    fn call(&self, _args: Self::Args, _datastore: &mut Datastore) -> String {
-        todo!()
-    }
-}
 
 pub struct Policy;
 
@@ -56,24 +24,12 @@ impl Policy {
     }
 }
 
-impl LabeledFunction {
-    // A function reads from and writes to a global datastore. This allows for interaction between
-    // tools and capture side effects through update to the datastore.
-    // Currently in this model we return an updated datastore.
-    pub fn _call(&self, args: LabeledArgs, datastore: &mut Datastore) -> String {
-        self.function.call(
-            Args(args.0.iter().map(|x| x.arg.to_string()).collect()),
-            datastore,
-        )
-    }
-}
-
 impl<P: Plan<LabeledState, LabeledMessage, Action = LabeledAction>>
     PlanningLoop<LabeledState, LabeledMessage, LabeledFunction, P>
 {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
-    pub fn run_with_policy(
+    pub async fn run_with_policy(
         &mut self,
         state: LabeledState,
         datastore: &mut Datastore,
@@ -90,9 +46,14 @@ impl<P: Plan<LabeledState, LabeledMessage, Action = LabeledAction>>
                 .map_err(|e| PlanError::CannotPlan(format!("{:?}", e)))?;
             match action {
                 LabeledAction::Query(_conv_history, _tools) => {
+                    // When querying the model, this planning loop is responsible to propages the
+                    // labels from the action to the model's response, signifying the inability to
+                    // precisely propagate labels through LLMs.
                     todo!()
                 }
                 LabeledAction::MakeCall(ref function, ref args, id) => {
+                    // Before making the actual call, we check that the call satisfies the security
+                    // policy.
                     // Here both `function` and `args` have a label
                     /*if !policy.is_allowed(&action) {
                         // Do not perform the action
@@ -105,10 +66,10 @@ impl<P: Plan<LabeledState, LabeledMessage, Action = LabeledAction>>
                         .unwrap()
                         .call(args.clone(), datastore);
                     // TODO: Create label for this message
-                    current_message = LabeledMessage {
-                        message: Message::ToolResult(tool_result, id),
-                        label: ProductLattice::new(Confidentiality::low(), Integrity::untrusted()),
-                    }
+                    current_message = LabeledMessage::new(
+                        Message::ToolResult(tool_result, id),
+                        ProductLattice::new(Confidentiality::low(), Integrity::untrusted()),
+                    )
                 }
                 LabeledAction::Finish(result) => return Ok(result),
             }
@@ -117,9 +78,19 @@ impl<P: Plan<LabeledState, LabeledMessage, Action = LabeledAction>>
 }
 
 pub struct TaintTrackingPlanner {
-    _tools: Vec<Function>,
-    _memory: Memory,
-    _policy: Policy,
+    tools: Vec<ChatCompletionTool>,
+    memory: Memory,
+    policy: Policy,
+}
+
+impl TaintTrackingPlanner {
+    pub fn new(tools: Vec<ChatCompletionTool>, policy: Policy) -> Self {
+        Self {
+            tools,
+            memory: HashMap::new(),
+            policy,
+        }
+    }
 }
 
 // Taint-tracking planner which is plugged into the `PlanningLoop`

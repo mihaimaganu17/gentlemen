@@ -217,7 +217,7 @@ impl Plan<State, Message> for VarPlanner {
                                 // function `name` with the normalized `arguments` and the LLM
                                 // generated tool id.
                                 Action::MakeCall(
-                                    Function(name),
+                                    Function::new(name),
                                     Args(self.normalize_args(arguments)?),
                                     tool_calls[0].clone().id,
                                 )

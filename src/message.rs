@@ -23,6 +23,15 @@ pub enum Message {
 
 #[derive(Clone)]
 pub struct LabeledMessage {
-    pub message: Message,
-    pub label: Label,
+    message: Message,
+    label: Label,
+}
+
+impl LabeledMessage {
+    pub fn new(message: Message, label: Label) -> Self {
+        Self {
+            message,
+            label,
+        }
+    }
 }

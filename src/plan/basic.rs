@@ -156,7 +156,7 @@ impl Plan<State, Message> for BasicPlanner {
                             // we can report it back to the LLM in the message that will contain
                             // the tool result.
                             let action = Action::MakeCall(
-                                Function(name),
+                                Function::new(name),
                                 Args(arguments?),
                                 tool_calls[0].clone().id,
                             );
