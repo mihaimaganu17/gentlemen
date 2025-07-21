@@ -8,10 +8,9 @@ pub mod function;
 
 pub use ifc::{Confidentiality, Integrity, Label, ProductLattice};
 pub use message::{LabeledMessage, Message};
-pub use plan::{BasicPlanner, Plan, PlanningLoop, VarPlanner};
+pub use plan::{BasicPlanner, Plan, PlanningLoop, VarPlanner, TaintTrackingPlanner, Policy};
 pub use state::{State, LabeledState, ConversationHistory, LabeledConversationHistory};
 pub use function::{Function, LabeledFunction, Args, LabeledArgs, Call};
-use std::fmt;
 
 // use plan::Variable;
 use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};

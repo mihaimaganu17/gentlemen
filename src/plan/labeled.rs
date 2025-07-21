@@ -1,9 +1,9 @@
 use crate::{
-    LabeledArgs, Call, Confidentiality, LabeledConversationHistory, LabeledState, LabeledFunction, Datastore, Integrity,
-    Label, LabeledMessage, Message, Plan, PlanningLoop, ProductLattice, plan::PlanError,
+    LabeledArgs, Call, Confidentiality, LabeledState, LabeledFunction, Datastore, Integrity,
+    LabeledMessage, Message, Plan, PlanningLoop, ProductLattice, plan::PlanError,
     tools::Memory,
 };
-use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
+use async_openai::types::ChatCompletionTool;
 use std::collections::HashMap;
 
 pub enum LabeledAction {

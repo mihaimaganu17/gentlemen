@@ -34,4 +34,12 @@ impl LabeledMessage {
             label,
         }
     }
+
+    pub fn message(&self) -> &Message {
+        &self.message
+    }
+
+    pub fn label(&self) -> &Label {
+        &self.label
+    }
 }

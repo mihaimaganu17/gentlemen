@@ -16,6 +16,10 @@ impl<M> LabeledConversationHistory<M> {
     pub fn new(conv: Vec<M>, label: Label) -> Self {
         Self { conv, label }
     }
+
+    pub fn label(&self) -> &Label {
+        &self.label
+    }
 }
 
 pub type LabeledState = LabeledConversationHistory<ChatCompletionRequestMessage>;

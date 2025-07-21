@@ -363,8 +363,8 @@ mod tests {
     async fn taint_tracking_planner() {
         use crate::{
             Message, LabeledMessage, Label, Confidentiality, Integrity,
-            ConversationHistory, LabeledFunction,
-            plan::{PlanningLoop, TaintTrackingPlanner, Policy},
+            LabeledFunction, Policy,
+            plan::{PlanningLoop, TaintTrackingPlanner},
         };
         use async_openai::types::{
             ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
@@ -484,7 +484,7 @@ mod tests {
             .into();
 
         let state: crate::LabeledState = crate::LabeledConversationHistory::new(vec![system_request, user_message], Label::new(Confidentiality::low(), Integrity::trusted()));
-        let chat_request = client.chat(state.messages().clone(), tools);
+        let chat_request = client.chat(state.messages(), tools);
         let current_message = chat_request.await.unwrap().choices[0].message.clone();
 
         let mut planning_loop = PlanningLoop::new(
