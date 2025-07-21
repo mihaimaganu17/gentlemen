@@ -1,6 +1,6 @@
+use crate::tools::{ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack_message};
 use crate::{Datastore, Label};
 use std::fmt;
-use crate::tools::{ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack_message};
 
 #[derive(PartialEq, Clone)]
 pub struct Function(String);

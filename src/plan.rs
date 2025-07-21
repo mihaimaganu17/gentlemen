@@ -4,9 +4,9 @@ mod plan_loop;
 mod var;
 
 pub use basic::BasicPlanner;
+pub use labeled::{Policy, TaintTrackingPlanner};
 pub use plan_loop::PlanningLoop;
 pub use var::VarPlanner;
-pub use labeled::{TaintTrackingPlanner, Policy};
 
 use async_openai::error::OpenAIError;
 use serde_json::Value;

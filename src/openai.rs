@@ -362,8 +362,7 @@ mod tests {
     #[tokio::test]
     async fn taint_tracking_planner() {
         use crate::{
-            Message, LabeledMessage, Label, Confidentiality, Integrity,
-            LabeledFunction, Policy,
+            Confidentiality, Integrity, Label, LabeledFunction, LabeledMessage, Message, Policy,
             plan::{PlanningLoop, TaintTrackingPlanner},
         };
         use async_openai::types::{
@@ -483,7 +482,10 @@ mod tests {
             .unwrap()
             .into();
 
-        let state: crate::LabeledState = crate::LabeledConversationHistory::new(vec![system_request, user_message], Label::new(Confidentiality::low(), Integrity::trusted()));
+        let state: crate::LabeledState = crate::LabeledConversationHistory::new(
+            vec![system_request, user_message],
+            Label::new(Confidentiality::low(), Integrity::trusted()),
+        );
         let chat_request = client.chat(state.messages(), tools);
         let current_message = chat_request.await.unwrap().choices[0].message.clone();
 
@@ -491,14 +493,28 @@ mod tests {
             tt_planner,
             client,
             vec![
-                LabeledFunction::new("read_emails".to_string(), Label::new(Confidentiality::high(), Integrity::untrusted())),
-                LabeledFunction::new("send_slack_message".to_string(), Label::new(Confidentiality::high(), Integrity::untrusted())),
+                LabeledFunction::new(
+                    "read_emails".to_string(),
+                    Label::new(Confidentiality::high(), Integrity::untrusted()),
+                ),
+                LabeledFunction::new(
+                    "send_slack_message".to_string(),
+                    Label::new(Confidentiality::high(), Integrity::untrusted()),
+                ),
             ],
         );
 
         let mut datastore = crate::Datastore;
         let response = planning_loop
-            .run_with_policy(state, &mut datastore, LabeledMessage::new(Message::Chat(current_message), Label::new(Confidentiality::low(), Integrity::trusted())), Policy)
+            .run_with_policy(
+                state,
+                &mut datastore,
+                LabeledMessage::new(
+                    Message::Chat(current_message),
+                    Label::new(Confidentiality::low(), Integrity::trusted()),
+                ),
+                Policy,
+            )
             .await
             .expect("Failed to run");
         println!("{response:#?}");

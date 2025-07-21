@@ -1,16 +1,16 @@
+pub mod function;
 pub mod ifc;
 mod message;
-mod state;
 pub mod openai;
 mod plan;
+mod state;
 pub mod tools;
-pub mod function;
 
+pub use function::{Args, Call, Function, LabeledArgs, LabeledFunction};
 pub use ifc::{Confidentiality, Integrity, Label, ProductLattice};
 pub use message::{LabeledMessage, Message};
-pub use plan::{BasicPlanner, Plan, PlanningLoop, VarPlanner, TaintTrackingPlanner, Policy};
-pub use state::{State, LabeledState, ConversationHistory, LabeledConversationHistory};
-pub use function::{Function, LabeledFunction, Args, LabeledArgs, Call};
+pub use plan::{BasicPlanner, Plan, PlanningLoop, Policy, TaintTrackingPlanner, VarPlanner};
+pub use state::{ConversationHistory, LabeledConversationHistory, LabeledState, State};
 
 // use plan::Variable;
 use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};

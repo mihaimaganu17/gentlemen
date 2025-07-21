@@ -1,7 +1,6 @@
 use crate::{
-    LabeledArgs, Call, Confidentiality, LabeledState, LabeledFunction, Datastore, Integrity,
-    LabeledMessage, Message, Plan, PlanningLoop, ProductLattice, plan::PlanError,
-    tools::Memory,
+    Call, Confidentiality, Datastore, Integrity, LabeledArgs, LabeledFunction, LabeledMessage,
+    LabeledState, Message, Plan, PlanningLoop, ProductLattice, plan::PlanError, tools::Memory,
 };
 use async_openai::types::ChatCompletionTool;
 use std::collections::HashMap;
@@ -14,7 +13,6 @@ pub enum LabeledAction {
     // Finish the conversation and respond to the user.
     Finish(String),
 }
-
 
 pub struct Policy;
 

@@ -29,10 +29,7 @@ pub struct LabeledMessage {
 
 impl LabeledMessage {
     pub fn new(message: Message, label: Label) -> Self {
-        Self {
-            message,
-            label,
-        }
+        Self { message, label }
     }
 
     pub fn message(&self) -> &Message {
