@@ -159,6 +159,34 @@ impl<T: Eq + Hash + Clone> Lattice for PowersetLattice<T> {
     }
 }
 
+// Information lattice which inverses the order of operations
+#[derive(Debug, PartialEq, Clone)]
+pub struct InverseLattice<T: Lattice> {
+    inner: T,
+}
+
+impl<T: Lattice> InverseLattice<T> {
+    pub fn new(inner: T) -> Self {
+        Self { inner }
+    }
+}
+
+impl<T: Lattice> PartialOrd for InverseLattice<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        other.partial_cmp(self)
+    }
+}
+
+impl<T: Lattice> Lattice for InverseLattice<T> {
+    fn join(self, other: Self) -> Option<Self> {
+        Some(Self::new(self.inner.meet(other.inner)?))
+    }
+
+    fn meet(self, other: Self) -> Option<Self> {
+        Some(Self::new(self.inner.join(other.inner)?))
+    }
+}
+
 #[derive(Debug)]
 pub enum LatticeError {
     SubsetNotInUniverse,
