@@ -1,7 +1,8 @@
 use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_json::{Map, Value, json};
-use std::collections::{HashMap, BTreeSet};
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use crate::ifc::{InverseLattice, PowersetLattice, ProductLattice, Integrity, LatticeError};
 
 #[derive(Serialize, Clone, Debug)]
 pub struct Email {
@@ -88,17 +89,27 @@ pub const INBOX: [Email; 5] = [
 
 #[derive(Debug)]
 pub struct EmailAddressUniverse<'a> {
-    inner: BTreeSet<&'a str>,
+    inner: HashSet<&'a str>,
 }
 
 impl<'a> EmailAddressUniverse<'a> {
     pub fn new(emails: &[Email]) -> Self {
         let inner = emails.iter().map(|e| e.sender)
-            .chain(emails.iter().map(|e| e.receiver)).collect::<BTreeSet<_>>();
+            .chain(emails.iter().map(|e| e.receiver)).collect::<HashSet<_>>();
 
         Self { inner }
     }
 }
+
+// Create a `label` for the readers of an email. This label is essentially identifying the level
+// of confidentiality amongst all the senders and receivers in the `universe` list, by filtering
+// only the ones in the `readers` list.
+pub fn readers_label<'a>(readers: HashSet<&'a str>, universe: HashSet<&'a str>) -> Result<InverseLattice<PowersetLattice<&'a str>>, LatticeError> {
+    Ok(InverseLattice::new(PowersetLattice::new(readers, universe)?))
+}
+
+// The [`EmailLabel`] is a product of the integrity label and the confidentiality label
+pub type EmailLabel<'a> = ProductLattice<Integrity, InverseLattice<PowersetLattice<&'a str>>>;
 
 // Represents a list of arguments to be passed for reading emails
 #[derive(Deserialize)]

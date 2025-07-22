@@ -173,7 +173,7 @@ impl<T: Lattice> InverseLattice<T> {
 
 impl<T: Lattice> PartialOrd for InverseLattice<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.partial_cmp(self)
+        other.inner.partial_cmp(&self.inner)
     }
 }
 
