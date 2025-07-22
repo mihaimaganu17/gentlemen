@@ -1,8 +1,10 @@
+use crate::ifc::{
+    Integrity, InverseLattice, Lattice, LatticeError, PowersetLattice, ProductLattice,
+};
 use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_json::{Map, Value, json};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use crate::ifc::{InverseLattice, PowersetLattice, ProductLattice, Integrity, LatticeError, Lattice};
 
 #[derive(Serialize, Clone, Debug)]
 pub struct Email {
@@ -94,18 +96,30 @@ pub struct EmailAddressUniverse<'a> {
 
 impl<'a> EmailAddressUniverse<'a> {
     pub fn new(emails: &[Email]) -> Self {
-        let inner = emails.iter().map(|e| e.sender)
-            .chain(emails.iter().map(|e| e.receivers).flatten()).collect::<HashSet<_>>();
+        let inner = emails
+            .iter()
+            .map(|e| e.sender)
+            .chain(emails.iter().flat_map(|e| e.receivers))
+            .collect::<HashSet<_>>();
 
         Self { inner }
+    }
+
+    pub fn into_inner(self) -> HashSet<&'a str> {
+        self.inner
     }
 }
 
 // Create a `label` for the readers of an email. This label is essentially identifying the level
 // of confidentiality amongst all the senders and receivers in the `universe` list, by filtering
 // only the ones in the `readers` list.
-pub fn readers_label<'a>(readers: HashSet<&'a str>, universe: HashSet<&'a str>) -> Result<InverseLattice<PowersetLattice<&'a str>>, LatticeError> {
-    Ok(InverseLattice::new(PowersetLattice::new(readers, universe)?))
+pub fn readers_label<'a>(
+    readers: HashSet<&'a str>,
+    universe: HashSet<&'a str>,
+) -> Result<InverseLattice<PowersetLattice<&'a str>>, LatticeError> {
+    Ok(InverseLattice::new(PowersetLattice::new(
+        readers, universe,
+    )?))
 }
 
 // The [`EmailLabel`] is a product of the integrity label and the confidentiality label
@@ -116,15 +130,32 @@ pub struct MetaValue<T, L: Lattice> {
     label: L,
 }
 
+impl<T, L: Lattice> MetaValue<T, L> {
+    pub fn value(&self) -> &T {
+        &self.value
+    }
+
+    pub fn label(&self) -> &L {
+        &self.label
+    }
+}
+
 /// Create label for the email and associate it with that email
-pub fn label_email<'a>(email: Email, universe: HashSet<&'a str>) -> Result<MetaValue<Email, EmailLabel<'a>>, LatticeError> {
+pub fn label_email(
+    email: Email,
+    universe: HashSet<& str>,
+) -> Result<MetaValue<Email, EmailLabel<'_>>, LatticeError> {
     let integrity = if email.sender.ends_with("@magnet.com") {
         Integrity::trusted()
     } else {
         Integrity::untrusted()
     };
 
-    let readers = email.receivers.iter().chain([email.sender].iter()).map(|e| *e).collect::<HashSet<&str>>();
+    let readers = email
+        .receivers
+        .iter()
+        .chain([email.sender].iter()).copied()
+        .collect::<HashSet<&str>>();
     let confidentiality = readers_label(readers, universe)?;
 
     Ok(MetaValue {
