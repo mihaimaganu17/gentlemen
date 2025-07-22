@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_json::{Map, Value, json};
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeSet};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Serialize, Clone, Debug)]
@@ -26,7 +26,7 @@ impl Email {
     }
 }
 
-const INBOX: [Email; 5] = [
+pub const INBOX: [Email; 5] = [
     Email {
         sender: "alice.hudson@contoso.com",
         receiver: "bob.sheffield@contoso.com",
@@ -85,6 +85,20 @@ const INBOX: [Email; 5] = [
         ,
     }
 ];
+
+#[derive(Debug)]
+pub struct EmailAddressUniverse<'a> {
+    inner: BTreeSet<&'a str>,
+}
+
+impl<'a> EmailAddressUniverse<'a> {
+    pub fn new(emails: &[Email]) -> Self {
+        let inner = emails.iter().map(|e| e.sender)
+            .chain(emails.iter().map(|e| e.receiver)).collect::<BTreeSet<_>>();
+
+        Self { inner }
+    }
+}
 
 // Represents a list of arguments to be passed for reading emails
 #[derive(Deserialize)]

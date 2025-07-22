@@ -102,6 +102,8 @@ impl Plan<LabeledState, LabeledMessage> for TaintTrackingPlanner {
         _state: LabeledState,
         _message: LabeledMessage,
     ) -> Result<(LabeledState, Self::Action), Self::Error> {
+        let email_universe = crate::tools::EmailAddressUniverse::new(&crate::tools::INBOX);
+        println!("{:#?}", email_universe);
         todo!()
     }
 }
