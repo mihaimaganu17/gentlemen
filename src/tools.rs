@@ -132,10 +132,7 @@ pub struct MetaValue<T, L: Lattice> {
 
 impl<T, L: Lattice> MetaValue<T, L> {
     pub fn new(value: T, label: L) -> Self {
-        Self {
-            value,
-            label,
-        }
+        Self { value, label }
     }
 
     pub fn value(&self) -> &T {
@@ -164,7 +161,8 @@ pub fn label_email(
     let readers = email
         .receivers
         .iter()
-        .chain([email.sender].iter()).copied()
+        .chain([email.sender].iter())
+        .copied()
         .collect::<HashSet<&str>>();
     let confidentiality = readers_label(readers, address_universe)?;
 
@@ -181,24 +179,52 @@ pub fn label_inbox<'a>(
     emails: &'a [Email],
     address_universe: HashSet<&'a str>,
 ) -> Vec<Result<MetaValue<Email, EmailLabel<'a>>, LatticeError>> {
-    emails.iter().map(|e| label_email(e.clone(), address_universe.clone())).collect()
+    emails
+        .iter()
+        .map(|e| label_email(e.clone(), address_universe.clone()))
+        .collect()
 }
 
 /// Create a single label for an entire list of labeled emails by applying join operations on their
 /// integrity labels and their confidentiality labels respectively.
-pub fn label_labeled_email_list<'a>(emails: Vec<MetaValue<Email, EmailLabel<'a>>>,
+pub fn label_labeled_email_list<'a>(
+    emails: Vec<MetaValue<Email, EmailLabel<'a>>>,
 ) -> Result<MetaValue<Vec<MetaValue<Email, EmailLabel<'a>>>, EmailLabel<'a>>, LatticeError> {
-    let Some(integrity) = emails.iter().map(|email| email.label().lattice1()).cloned().reduce(|acc, e| acc.join(e).unwrap_or(Integrity::untrusted())) else {
+    // Make an overall integrity label by joining all the labels of the email list. In this
+    // scenario, the lowest integrity scenario wins.
+    let Some(integrity) = emails
+        .iter()
+        .map(|email| email.label().lattice1())
+        .cloned()
+        .reduce(|acc, e| acc.join(e).unwrap_or(Integrity::untrusted()))
+    else {
         return Err(LatticeError::IntegrityJoinFailed);
     };
+
+    // Filter out the emails without the labels
     let email_universe: Vec<Email> = emails.iter().map(|e| e.value()).cloned().collect();
+    // Create the address universe of all the possible addresses in the email list above
     let address_universe = EmailAddressUniverse::new(&email_universe).into_inner();
+    // Create a label for the least confidentiality possible. This is basically everybody can read
+    // everybody
     let least_confidentiality = readers_label(address_universe.clone(), address_universe)?;
-    let Some(confidentiality) = emails.iter().map(|email| email.label().lattice2()).cloned().reduce(|acc, e| acc.join(e).unwrap_or(least_confidentiality.clone())) else {
+    // Gather the confidentiality of the labeled emails. In this case we are maximizing towards the
+    // maximum confidentiality by joining all the labels (a public information has clearence for
+    // secret readers, but secret information cannot have clearence for public readers)
+    let Some(confidentiality) = emails
+        .iter()
+        .map(|email| email.label().lattice2())
+        .cloned()
+        .reduce(|acc, e| acc.join(e).unwrap_or(least_confidentiality.clone()))
+    else {
         return Err(LatticeError::ConfidentialityJoinFailed);
     };
 
-    Ok(MetaValue::new(emails, ProductLattice::new(integrity, confidentiality)))
+    // Create a new label over the entire email list
+    Ok(MetaValue::new(
+        emails,
+        ProductLattice::new(integrity, confidentiality),
+    ))
 }
 
 // Represents a list of arguments to be passed for reading emails
