@@ -140,10 +140,13 @@ impl<T, L: Lattice> MetaValue<T, L> {
     }
 }
 
-/// Create label for the email and associate it with that email
+/// Create label which specifies the integrity and confidentiality for that `email` and associate it
+/// with that email.
+/// Integrity is infered based on the domain of the email's sender and confidentiality is inferred
+/// based on the `address_universe` passed as a value.
 pub fn label_email(
     email: Email,
-    universe: HashSet<& str>,
+    address_universe: HashSet<&str>,
 ) -> Result<MetaValue<Email, EmailLabel<'_>>, LatticeError> {
     let integrity = if email.sender.ends_with("@magnet.com") {
         Integrity::trusted()
@@ -156,12 +159,22 @@ pub fn label_email(
         .iter()
         .chain([email.sender].iter()).copied()
         .collect::<HashSet<&str>>();
-    let confidentiality = readers_label(readers, universe)?;
+    let confidentiality = readers_label(readers, address_universe)?;
 
     Ok(MetaValue {
         value: email,
         label: ProductLattice::new(integrity, confidentiality),
     })
+}
+
+/// Create a label for integrity and confidentiality for each email in the list of `emails`.
+/// Integrity is infered based on the domain of the email's sender and confidentiality is inferred
+/// based on the `address_universe` passed as a value.
+pub fn label_inbox<'a>(
+    emails: &'a [Email],
+    address_universe: HashSet<&'a str>,
+) -> Vec<Result<MetaValue<Email, EmailLabel<'a>>, LatticeError>> {
+    emails.iter().map(|e| label_email(e.clone(), address_universe.clone())).collect()
 }
 
 // Represents a list of arguments to be passed for reading emails
