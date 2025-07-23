@@ -37,10 +37,20 @@ impl Confidentiality {
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Integrity {
-    // Low integrity
-    Untrusted = 0,
     // High integrity
-    Trusted = 1,
+    Trusted = 0,
+    // Low integrity
+    Untrusted = 1,
+}
+
+impl<L: Lattice> Lattice for Option<L> {
+    fn join(self, other: Self) -> Option<Self> {
+        Some(self.and(other))
+    }
+
+    fn meet(self, other: Self) -> Option<Self> {
+        Some(self.or(other))
+    }
 }
 
 impl Lattice for Integrity {
@@ -110,6 +120,14 @@ impl<A: Lattice, B: Lattice> Lattice for ProductLattice<A, B> {
 impl<A: Lattice, B: Lattice> ProductLattice<A, B> {
     pub fn new(lattice1: A, lattice2: B) -> Self {
         Self { lattice1, lattice2 }
+    }
+
+    pub fn lattice1(&self) -> &A {
+        &self.lattice1
+    }
+
+    pub fn lattice2(&self) -> &B {
+        &self.lattice2
     }
 }
 
@@ -190,6 +208,8 @@ impl<T: Lattice> Lattice for InverseLattice<T> {
 #[derive(Debug)]
 pub enum LatticeError {
     SubsetNotInUniverse,
+    IntegrityJoinFailed,
+    ConfidentialityJoinFailed,
 }
 
 pub type Label = ProductLattice<Confidentiality, Integrity>;
