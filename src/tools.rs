@@ -238,6 +238,11 @@ pub struct ReadEmailsArgs {
 }
 
 impl ReadEmailsArgs {
+    /// Create a new instance to read `count` emails
+    pub fn new(count: usize) -> Self {
+        Self { count }
+    }
+
     // Custom deserailizer for the `count` field of the [`ReadEmailArgs`] structure. This is such
     // that we can also obtain a numerical value from a passed `String`.
     fn count_de_ser<'de, D: Deserializer<'de>>(deserializer: D) -> Result<usize, D::Error> {
@@ -431,7 +436,26 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn send_slack_message() {
+    fn emails_labeled() {
+        let email_args = ReadEmailsArgs::new(5);
+        let emails_read = read_emails_labeled(email_args, &INBOX);
+        println!("{:#?}", emails_read.emails.value[0].label());
+        println!("{:#?}", emails_read.emails.label());
+    }
+
+    #[test]
+    fn slack_message_labeled() {
+        let send_slack_args = SendSlackMessageArgs {
+            channel: "bob.sheffield@contoso.com".to_string(),
+            message: "Hello world!".to_string(),
+            preview: true,
+        };
+        let send_slack_result = send_slack_message_labeled(send_slack_args);
+        println!("{:#?}", send_slack_result._status.label());
+    }
+
+    #[test]
+    fn send_slack_message_schema() {
         let parameters = json!({
             "type": "object",
             "properties": {
