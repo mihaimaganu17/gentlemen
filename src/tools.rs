@@ -3,7 +3,7 @@ use crate::ifc::{
 };
 use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_json::{Map, Value, json};
-use std::collections::{HashMap, HashSet};
+use std::{fmt, collections::{HashMap, HashSet}};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Serialize, Clone, Debug)]
@@ -125,12 +125,13 @@ pub fn readers_label<'a>(
 // The [`EmailLabel`] is a product of the integrity label and the confidentiality label
 pub type EmailLabel<'a> = ProductLattice<Integrity, InverseLattice<PowersetLattice<&'a str>>>;
 
-pub struct MetaValue<T, L: Lattice> {
+#[derive(Debug)]
+pub struct MetaValue<T: fmt::Debug, L: Lattice> {
     value: T,
     label: L,
 }
 
-impl<T, L: Lattice> MetaValue<T, L> {
+impl<T: fmt::Debug, L: Lattice> MetaValue<T, L> {
     pub fn new(value: T, label: L) -> Self {
         Self { value, label }
     }
@@ -178,10 +179,11 @@ pub fn label_email(
 pub fn label_inbox<'a>(
     emails: &'a [Email],
     address_universe: HashSet<&'a str>,
-) -> Vec<Result<MetaValue<Email, EmailLabel<'a>>, LatticeError>> {
+) -> Vec<MetaValue<Email, EmailLabel<'a>>> {
     emails
         .iter()
         .map(|e| label_email(e.clone(), address_universe.clone()))
+        .flatten()
         .collect()
 }
 
@@ -236,7 +238,9 @@ pub struct ReadEmailsArgs {
 }
 
 impl ReadEmailsArgs {
-    pub fn count_de_ser<'de, D: Deserializer<'de>>(deserializer: D) -> Result<usize, D::Error> {
+    // Custom deserailizer for the `count` field of the [`ReadEmailArgs`] structure. This is such
+    // that we can also obtain a numerical value from a passed `String`.
+    fn count_de_ser<'de, D: Deserializer<'de>>(deserializer: D) -> Result<usize, D::Error> {
         Ok(match Value::deserialize(deserializer)? {
             Value::String(s) => s.parse().map_err(de::Error::custom)?,
             Value::Number(num) => num.as_u64().ok_or(de::Error::custom("Invalid number"))? as usize,
@@ -245,17 +249,33 @@ impl ReadEmailsArgs {
     }
 }
 
-// Represents a list of arguments to be passed for reading emails
+// Represents a list of emails to be fed into the LLM for reading
 #[derive(Serialize, Debug)]
 pub struct ReadEmailsResults {
-    // Number of emails to read
+    // List of emails we read
     emails: Vec<Email>,
+}
+
+// Represents a list of emails to be fed into the LLM for reading
+#[derive(Debug)]
+pub struct ReadEmailsResultsLabeled<'a> {
+    // List of emails we read
+    emails: MetaValue<Vec<MetaValue<Email, EmailLabel<'a>>>, EmailLabel<'a>>,
 }
 
 pub fn read_emails(args: ReadEmailsArgs) -> ReadEmailsResults {
     let count = std::cmp::min(args.count, INBOX.len());
     ReadEmailsResults {
         emails: INBOX[0..count].to_vec(),
+    }
+}
+
+pub fn read_emails_labeled<'a>(args: ReadEmailsArgs, emails: &'a [Email]) -> ReadEmailsResultsLabeled<'a> {
+    let count = std::cmp::min(args.count, INBOX.len());
+    let labeled_emails = label_inbox(&emails[0..count], EmailAddressUniverse::new(&INBOX).into_inner());
+    let labeled_list = label_labeled_email_list(labeled_emails).unwrap();
+    ReadEmailsResultsLabeled {
+        emails: labeled_list,
     }
 }
 
