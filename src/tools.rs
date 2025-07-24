@@ -110,9 +110,9 @@ impl<'a> EmailAddressUniverse<'a> {
     }
 }
 
-// Create a `label` for the readers of an email. This label is essentially identifying the level
-// of confidentiality amongst all the senders and receivers in the `universe` list, by filtering
-// only the ones in the `readers` list.
+/// Create a `label` for the readers of an email. This label is essentially identifying the level
+/// of confidentiality amongst all the senders and receivers in the `universe` list, by filtering
+/// only the ones in the `readers` list.
 pub fn readers_label<'a>(
     readers: HashSet<&'a str>,
     universe: HashSet<&'a str>,
@@ -270,28 +270,38 @@ pub fn read_emails(args: ReadEmailsArgs) -> ReadEmailsResults {
     }
 }
 
+/// Read a desired quantity of emails from the list of `email` filtered by the requested `args`.
+/// The returned list of emails contains a product label of integrity and confidentiality for each
+/// email and one for the list as a whole as well.
 pub fn read_emails_labeled<'a>(args: ReadEmailsArgs, emails: &'a [Email]) -> ReadEmailsResultsLabeled<'a> {
+    // Get the maximum amount of email we could read such that we do not overflow.
     let count = std::cmp::min(args.count, INBOX.len());
+    // Label each of the requested emails
     let labeled_emails = label_inbox(&emails[0..count], EmailAddressUniverse::new(&INBOX).into_inner());
+    // Label the entire list of email by joining their labels
     let labeled_list = label_labeled_email_list(labeled_emails).unwrap();
+    // Return the result
     ReadEmailsResultsLabeled {
         emails: labeled_list,
     }
 }
 
+/// Arguments for sending the slack message
 #[derive(Deserialize, Clone, Debug)]
 pub struct SendSlackMessageArgs {
-    // The name of identifier of the Slack channel
+    // The name or identifier of the Slack channel
     channel: String,
     // The message to be sent to the channel
     message: String,
-    // Whether to enable link previous
+    // Whether to enable link previews
     #[serde(deserialize_with = "SendSlackMessageArgs::preview_de_ser")]
     preview: bool,
 }
 
 impl SendSlackMessageArgs {
-    pub fn preview_de_ser<'de, D: Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
+    // Custom deserialiser for the `preview` field in the [`SendSlackMessageArgs`] structure. This
+    // is such that we could parse a `bool` value from a `String` as well.
+    fn preview_de_ser<'de, D: Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
         Ok(match Value::deserialize(deserializer)? {
             Value::String(s) => match s.as_str() {
                 "true" | "True" => true,
@@ -319,6 +329,26 @@ pub fn send_slack_message(args: SendSlackMessageArgs) -> SendSlackMessageResult 
     );
     SendSlackMessageResult {
         _status: "Message sent!".to_string(),
+    }
+}
+
+#[derive(Debug)]
+pub struct SendSlackMessageResultLabeled<'a> {
+    // The success or failure status of the message sending
+    _status: MetaValue<String, EmailLabel<'a>>,
+}
+
+pub fn send_slack_message_labeled<'a>(args: SendSlackMessageArgs) -> SendSlackMessageResultLabeled<'a> {
+    println!(
+        "Sending {0} to {1} channel {2} preview",
+        args.message,
+        args.channel,
+        if args.preview { "with" } else { "without" }
+    );
+    let email_universe = crate::tools::EmailAddressUniverse::new(&INBOX).into_inner();
+    let label = ProductLattice::new(Integrity::trusted(), readers_label(email_universe.clone(), email_universe).unwrap());
+    SendSlackMessageResultLabeled {
+        _status: MetaValue::new("Message sent!".to_string(), label),
     }
 }
 
