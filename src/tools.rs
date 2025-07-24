@@ -3,8 +3,11 @@ use crate::ifc::{
 };
 use serde::{Deserialize, Deserializer, Serialize, de};
 use serde_json::{Map, Value, json};
-use std::{fmt, collections::{HashMap, HashSet}};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
 
 #[derive(Serialize, Clone, Debug)]
 pub struct Email {
@@ -278,11 +281,17 @@ pub fn read_emails(args: ReadEmailsArgs) -> ReadEmailsResults {
 /// Read a desired quantity of emails from the list of `email` filtered by the requested `args`.
 /// The returned list of emails contains a product label of integrity and confidentiality for each
 /// email and one for the list as a whole as well.
-pub fn read_emails_labeled<'a>(args: ReadEmailsArgs, emails: &'a [Email]) -> ReadEmailsResultsLabeled<'a> {
+pub fn read_emails_labeled<'a>(
+    args: ReadEmailsArgs,
+    emails: &'a [Email],
+) -> ReadEmailsResultsLabeled<'a> {
     // Get the maximum amount of email we could read such that we do not overflow.
     let count = std::cmp::min(args.count, INBOX.len());
     // Label each of the requested emails
-    let labeled_emails = label_inbox(&emails[0..count], EmailAddressUniverse::new(&INBOX).into_inner());
+    let labeled_emails = label_inbox(
+        &emails[0..count],
+        EmailAddressUniverse::new(&INBOX).into_inner(),
+    );
     // Label the entire list of email by joining their labels
     let labeled_list = label_labeled_email_list(labeled_emails).unwrap();
     // Return the result
@@ -343,7 +352,9 @@ pub struct SendSlackMessageResultLabeled<'a> {
     _status: MetaValue<String, EmailLabel<'a>>,
 }
 
-pub fn send_slack_message_labeled<'a>(args: SendSlackMessageArgs) -> SendSlackMessageResultLabeled<'a> {
+pub fn send_slack_message_labeled<'a>(
+    args: SendSlackMessageArgs,
+) -> SendSlackMessageResultLabeled<'a> {
     println!(
         "Sending {0} to {1} channel {2} preview",
         args.message,
@@ -351,7 +362,10 @@ pub fn send_slack_message_labeled<'a>(args: SendSlackMessageArgs) -> SendSlackMe
         if args.preview { "with" } else { "without" }
     );
     let email_universe = crate::tools::EmailAddressUniverse::new(&INBOX).into_inner();
-    let label = ProductLattice::new(Integrity::trusted(), readers_label(email_universe.clone(), email_universe).unwrap());
+    let label = ProductLattice::new(
+        Integrity::trusted(),
+        readers_label(email_universe.clone(), email_universe).unwrap(),
+    );
     SendSlackMessageResultLabeled {
         _status: MetaValue::new("Message sent!".to_string(), label),
     }
