@@ -131,6 +131,7 @@ impl<A: Lattice, B: Lattice> ProductLattice<A, B> {
     }
 }
 
+/// Powerset lattice ordered by subset inclusion
 #[derive(Debug, PartialEq, Clone)]
 pub struct PowersetLattice<T: Eq + Hash> {
     subset: HashSet<T>,

@@ -125,7 +125,7 @@ pub fn readers_label<'a>(
     )?))
 }
 
-// The [`EmailLabel`] is a product of the integrity label and the confidentiality label
+/// The [`EmailLabel`] is a product lattice of the integrity label and the confidentiality label
 pub type EmailLabel<'a> = ProductLattice<Integrity, InverseLattice<PowersetLattice<&'a str>>>;
 
 #[derive(Debug)]
@@ -453,8 +453,48 @@ mod tests {
     fn emails_labeled() {
         let email_args = ReadEmailsArgs::new(5);
         let emails_read = read_emails_labeled(email_args, &INBOX);
-        println!("{:#?}", emails_read.emails.value[0].label());
-        println!("{:#?}", emails_read.emails.label());
+        let expected_first_item_label = ProductLattice::new(
+            Integrity::trusted(),
+            InverseLattice::new(PowersetLattice::new(
+                HashSet::from(
+                    ["bob.sheffield@magnet.com",
+                "alice.hudson@magnet.com",
+                    ]
+
+                ),
+                HashSet::from([
+                    "david.bernard@magnet.com",
+                "charlie.hamadou@magnet.com",
+                "robert@universaltechadvise.biz",
+                "bob.sheffield@magnet.com",
+                "payouts@onlyfans.com",
+                "alice.hudson@magnet.com",
+                ]
+                ),
+            ).expect("Cannot create powerset lattice"))
+        );
+        assert!(&expected_first_item_label == emails_read.emails.value[0].label());
+
+        let expected_list_label = ProductLattice::new(
+            Integrity::untrusted(),
+            InverseLattice::new(PowersetLattice::new(
+                HashSet::from(
+                    ["bob.sheffield@magnet.com",
+                    ]
+                ),
+                HashSet::from([
+                "robert@universaltechadvise.biz",
+                    "david.bernard@magnet.com",
+                "charlie.hamadou@magnet.com",
+                "bob.sheffield@magnet.com",
+                "payouts@onlyfans.com",
+                "alice.hudson@magnet.com",
+                ]
+                ),
+            ).expect("Cannot create powerset lattice"))
+        );
+
+        assert!(&expected_list_label ==  emails_read.emails.label());
     }
 
     #[test]
@@ -465,7 +505,32 @@ mod tests {
             preview: true,
         };
         let send_slack_result = send_slack_message_labeled(send_slack_args);
-        println!("{:#?}", send_slack_result._status.label());
+        let expected_slack_label = ProductLattice::new(
+            Integrity::trusted(),
+            InverseLattice::new(PowersetLattice::new(
+                HashSet::from(
+                    [
+                "robert@universaltechadvise.biz",
+                    "david.bernard@magnet.com",
+                "charlie.hamadou@magnet.com",
+                "bob.sheffield@magnet.com",
+                "payouts@onlyfans.com",
+                "alice.hudson@magnet.com",
+                ]
+                ),
+                HashSet::from(
+                    [
+                "robert@universaltechadvise.biz",
+                    "david.bernard@magnet.com",
+                "charlie.hamadou@magnet.com",
+                "bob.sheffield@magnet.com",
+                "payouts@onlyfans.com",
+                "alice.hudson@magnet.com",
+                ]
+                ),
+            ).expect("Cannot create powerset lattice"))
+        );
+        assert!(&expected_slack_label == send_slack_result._status.label());
     }
 
     #[test]
