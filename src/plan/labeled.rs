@@ -1,7 +1,9 @@
 use crate::{
-    Action, Call, Confidentiality, Datastore, Integrity, Function, Message,
-    State, Plan, PlanningLoop, ProductLattice, plan::PlanError, tools::{Memory, MetaValue},
-    ifc::Lattice,
+    Action, Call, Confidentiality, Datastore, Function, Integrity, Message, Plan, PlanningLoop,
+    ProductLattice, State,
+    ifc::{Lattice, InverseLattice, PowersetLattice},
+    plan::PlanError,
+    tools::{Memory, MetaValue},
 };
 use async_openai::types::ChatCompletionTool;
 use std::collections::HashMap;
@@ -30,13 +32,23 @@ impl Policy {
 
 // A trace is a sequence of actions that the model takes starting from a user's Message::Query
 // and ending with an `Action::Finish`.
-pub struct Trace<L: Lattice>(pub Vec<MetaValue<Action, L>>);
+pub struct Trace<L: Lattice>(Vec<MetaValue<Action, L>>);
 
 impl<L: Lattice> Trace<L> {
     pub fn new() -> Self {
         Self(vec![])
     }
+
+    pub fn into_inner(self) -> Vec<MetaValue<Action, L>> {
+        self.0
+    }
+
+    pub fn value(&self) -> &[MetaValue<Action, L>] {
+        &self.0
+    }
 }
+
+pub type ActionLabel<'a> = ProductLattice<Integrity, InverseLattice<PowersetLattice<&'a str>>>;
 
 impl<P: Plan<State, Message, Action = Action>> PlanningLoop<State, Message, Function, P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
@@ -46,11 +58,11 @@ impl<P: Plan<State, Message, Action = Action>> PlanningLoop<State, Message, Func
         state: State,
         datastore: &mut Datastore,
         message: Message,
-        label: L,
+        _label: L,
         _policy: Policy,
     ) -> Result<String, PlanError> {
         // Create a new trace of actions
-        let mut trace = Trace::new();
+        let mut _trace: Trace<ActionLabel<'_>> = Trace::new();
         let mut current_message = message;
         let mut current_state = state;
         loop {
@@ -82,7 +94,7 @@ impl<P: Plan<State, Message, Action = Action>> PlanningLoop<State, Message, Func
                         .call(args.clone(), datastore);
                     // The tool call above also issues a result and a label, which we need to
                     // convert here into a Message and a `Label`
-                    let label = ProductLattice::new(Confidentiality::low(), Integrity::untrusted());
+                    let _label = ProductLattice::new(Confidentiality::low(), Integrity::untrusted());
                     current_message = Message::ToolResult(tool_result, id);
                 }
                 Action::Finish(result) => return Ok(result),

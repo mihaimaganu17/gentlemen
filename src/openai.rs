@@ -362,7 +362,7 @@ mod tests {
     #[tokio::test]
     async fn taint_tracking_planner() {
         use crate::{
-            Confidentiality, Integrity, Label, Function, Message, Policy,
+            Confidentiality, Function, Integrity, Label, Message, Policy,
             plan::{PlanningLoop, TaintTrackingPlanner},
         };
         use async_openai::types::{
@@ -482,9 +482,7 @@ mod tests {
             .unwrap()
             .into();
 
-        let state: crate::State = crate::ConversationHistory(
-            vec![system_request, user_message],
-        );
+        let state: crate::State = crate::ConversationHistory(vec![system_request, user_message]);
         let chat_request = client.chat(state.0.clone(), tools);
         let current_message = chat_request.await.unwrap().choices[0].message.clone();
 

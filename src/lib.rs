@@ -41,6 +41,5 @@ pub struct Task {
     _datastores: Vec<Datastore>,
 }
 
-
 #[cfg(test)]
 mod tests {}
