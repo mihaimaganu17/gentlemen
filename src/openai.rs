@@ -362,7 +362,7 @@ mod tests {
     #[tokio::test]
     async fn taint_tracking_planner() {
         use crate::{
-            Confidentiality, Integrity, Label, LabeledFunction, LabeledMessage, Message, Policy,
+            Confidentiality, Integrity, Label, Function, Message, Policy,
             plan::{PlanningLoop, TaintTrackingPlanner},
         };
         use async_openai::types::{
@@ -482,25 +482,18 @@ mod tests {
             .unwrap()
             .into();
 
-        let state: crate::LabeledState = crate::LabeledConversationHistory::new(
+        let state: crate::State = crate::ConversationHistory(
             vec![system_request, user_message],
-            Label::new(Confidentiality::low(), Integrity::trusted()),
         );
-        let chat_request = client.chat(state.messages(), tools);
+        let chat_request = client.chat(state.0.clone(), tools);
         let current_message = chat_request.await.unwrap().choices[0].message.clone();
 
         let mut planning_loop = PlanningLoop::new(
             tt_planner,
             client,
             vec![
-                LabeledFunction::new(
-                    "read_emails".to_string(),
-                    Label::new(Confidentiality::high(), Integrity::untrusted()),
-                ),
-                LabeledFunction::new(
-                    "send_slack_message".to_string(),
-                    Label::new(Confidentiality::high(), Integrity::untrusted()),
-                ),
+                Function::new("read_emails".to_string()),
+                Function::new("send_slack_message".to_string()),
             ],
         );
 
@@ -509,10 +502,8 @@ mod tests {
             .run_with_policy(
                 state,
                 &mut datastore,
-                LabeledMessage::new(
-                    Message::Chat(current_message),
-                    Label::new(Confidentiality::low(), Integrity::trusted()),
-                ),
+                Message::Chat(current_message),
+                Label::new(Confidentiality::low(), Integrity::trusted()),
                 Policy,
             )
             .await

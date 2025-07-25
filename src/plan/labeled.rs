@@ -41,11 +41,12 @@ impl<L: Lattice> Trace<L> {
 impl<P: Plan<State, Message, Action = Action>> PlanningLoop<State, Message, Function, P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
-    pub async fn run_with_policy(
+    pub async fn run_with_policy<L: Lattice>(
         &mut self,
         state: State,
         datastore: &mut Datastore,
         message: Message,
+        label: L,
         _policy: Policy,
     ) -> Result<String, PlanError> {
         // Create a new trace of actions
