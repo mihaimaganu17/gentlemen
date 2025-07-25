@@ -1,7 +1,7 @@
 use crate::{
     Action, Call, Confidentiality, Datastore, Function, Integrity, Message, Plan, PlanningLoop,
     ProductLattice, State,
-    ifc::{Lattice, InverseLattice, PowersetLattice},
+    ifc::{InverseLattice, Lattice, PowersetLattice},
     plan::PlanError,
     tools::{Memory, MetaValue},
 };
@@ -94,7 +94,8 @@ impl<P: Plan<State, Message, Action = Action>> PlanningLoop<State, Message, Func
                         .call(args.clone(), datastore);
                     // The tool call above also issues a result and a label, which we need to
                     // convert here into a Message and a `Label`
-                    let _label = ProductLattice::new(Confidentiality::low(), Integrity::untrusted());
+                    let _label =
+                        ProductLattice::new(Confidentiality::low(), Integrity::untrusted());
                     current_message = Message::ToolResult(tool_result, id);
                 }
                 Action::Finish(result) => return Ok(result),
