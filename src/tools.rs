@@ -455,46 +455,42 @@ mod tests {
         let emails_read = read_emails_labeled(email_args, &INBOX);
         let expected_first_item_label = ProductLattice::new(
             Integrity::trusted(),
-            InverseLattice::new(PowersetLattice::new(
-                HashSet::from(
-                    ["bob.sheffield@magnet.com",
-                "alice.hudson@magnet.com",
-                    ]
-
-                ),
-                HashSet::from([
-                    "david.bernard@magnet.com",
-                "charlie.hamadou@magnet.com",
-                "robert@universaltechadvise.biz",
-                "bob.sheffield@magnet.com",
-                "payouts@onlyfans.com",
-                "alice.hudson@magnet.com",
-                ]
-                ),
-            ).expect("Cannot create powerset lattice"))
+            InverseLattice::new(
+                PowersetLattice::new(
+                    HashSet::from(["bob.sheffield@magnet.com", "alice.hudson@magnet.com"]),
+                    HashSet::from([
+                        "david.bernard@magnet.com",
+                        "charlie.hamadou@magnet.com",
+                        "robert@universaltechadvise.biz",
+                        "bob.sheffield@magnet.com",
+                        "payouts@onlyfans.com",
+                        "alice.hudson@magnet.com",
+                    ]),
+                )
+                .expect("Cannot create powerset lattice"),
+            ),
         );
         assert!(&expected_first_item_label == emails_read.emails.value[0].label());
 
         let expected_list_label = ProductLattice::new(
             Integrity::untrusted(),
-            InverseLattice::new(PowersetLattice::new(
-                HashSet::from(
-                    ["bob.sheffield@magnet.com",
-                    ]
-                ),
-                HashSet::from([
-                "robert@universaltechadvise.biz",
-                    "david.bernard@magnet.com",
-                "charlie.hamadou@magnet.com",
-                "bob.sheffield@magnet.com",
-                "payouts@onlyfans.com",
-                "alice.hudson@magnet.com",
-                ]
-                ),
-            ).expect("Cannot create powerset lattice"))
+            InverseLattice::new(
+                PowersetLattice::new(
+                    HashSet::from(["bob.sheffield@magnet.com"]),
+                    HashSet::from([
+                        "robert@universaltechadvise.biz",
+                        "david.bernard@magnet.com",
+                        "charlie.hamadou@magnet.com",
+                        "bob.sheffield@magnet.com",
+                        "payouts@onlyfans.com",
+                        "alice.hudson@magnet.com",
+                    ]),
+                )
+                .expect("Cannot create powerset lattice"),
+            ),
         );
 
-        assert!(&expected_list_label ==  emails_read.emails.label());
+        assert!(&expected_list_label == emails_read.emails.label());
     }
 
     #[test]
@@ -507,28 +503,27 @@ mod tests {
         let send_slack_result = send_slack_message_labeled(send_slack_args);
         let expected_slack_label = ProductLattice::new(
             Integrity::trusted(),
-            InverseLattice::new(PowersetLattice::new(
-                HashSet::from(
-                    [
-                "robert@universaltechadvise.biz",
-                    "david.bernard@magnet.com",
-                "charlie.hamadou@magnet.com",
-                "bob.sheffield@magnet.com",
-                "payouts@onlyfans.com",
-                "alice.hudson@magnet.com",
-                ]
-                ),
-                HashSet::from(
-                    [
-                "robert@universaltechadvise.biz",
-                    "david.bernard@magnet.com",
-                "charlie.hamadou@magnet.com",
-                "bob.sheffield@magnet.com",
-                "payouts@onlyfans.com",
-                "alice.hudson@magnet.com",
-                ]
-                ),
-            ).expect("Cannot create powerset lattice"))
+            InverseLattice::new(
+                PowersetLattice::new(
+                    HashSet::from([
+                        "robert@universaltechadvise.biz",
+                        "david.bernard@magnet.com",
+                        "charlie.hamadou@magnet.com",
+                        "bob.sheffield@magnet.com",
+                        "payouts@onlyfans.com",
+                        "alice.hudson@magnet.com",
+                    ]),
+                    HashSet::from([
+                        "robert@universaltechadvise.biz",
+                        "david.bernard@magnet.com",
+                        "charlie.hamadou@magnet.com",
+                        "bob.sheffield@magnet.com",
+                        "payouts@onlyfans.com",
+                        "alice.hudson@magnet.com",
+                    ]),
+                )
+                .expect("Cannot create powerset lattice"),
+            ),
         );
         assert!(&expected_slack_label == send_slack_result._status.label());
     }
