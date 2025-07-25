@@ -2,7 +2,7 @@ use crate::Label;
 use async_openai::types::ChatCompletionRequestMessage;
 
 // Comprises all the messages in the conversation up to the current point
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ConversationHistory<T>(pub Vec<T>);
 pub type State = ConversationHistory<ChatCompletionRequestMessage>;
 

@@ -1,39 +1,55 @@
 use crate::{
-    Call, Confidentiality, Datastore, Integrity, LabeledArgs, LabeledFunction, LabeledMessage,
-    LabeledState, Message, Plan, PlanningLoop, ProductLattice, plan::PlanError, tools::Memory,
+    Action, Call, Confidentiality, Datastore, Integrity, Function, Message,
+    State, Plan, PlanningLoop, ProductLattice, plan::PlanError, tools::{Memory, MetaValue},
+    ifc::Lattice,
 };
 use async_openai::types::ChatCompletionTool;
 use std::collections::HashMap;
 
-pub enum LabeledAction {
-    // Query the model with a specific conversation history and available tools
-    Query(LabeledState, Vec<LabeledFunction>),
-    // Call a `Tool` with `Args`
-    MakeCall(LabeledFunction, LabeledArgs, String),
-    // Finish the conversation and respond to the user.
-    Finish(String),
-}
-
 pub struct Policy;
 
 impl Policy {
-    fn _is_allowed(&self, _action: &LabeledAction) -> bool {
+    fn _is_allowed(&self, _action: &Action) -> bool {
         true
     }
 }
+// Planners get instrumented with dynamic information-flow control via taint-tracking. For this,
+// labels are attached to messages, actions, tool arguments and results, and vairables in the
+// datastore.
+//
+// Labels originate from data read by tools from the datastore, which tools propagate to their
+// results,
+// the planner propagates from messages to actions
+// and the planning loop propagates throughout its execution.
+//
+// We add a metadata field to label each node in the syntax tree of tools results.
+// When non-empty, such a label applied to all fields of that node and below.
+//
+// Also attach metadata field to label individual messages in the conversation history.
+// The initial system and user messages are typically considered trusted and public and by default.
 
-impl<P: Plan<LabeledState, LabeledMessage, Action = LabeledAction>>
-    PlanningLoop<LabeledState, LabeledMessage, LabeledFunction, P>
-{
+// A trace is a sequence of actions that the model takes starting from a user's Message::Query
+// and ending with an `Action::Finish`.
+pub struct Trace<L: Lattice>(pub Vec<MetaValue<Action, L>>);
+
+impl<L: Lattice> Trace<L> {
+    pub fn new() -> Self {
+        Self(vec![])
+    }
+}
+
+impl<P: Plan<State, Message, Action = Action>> PlanningLoop<State, Message, Function, P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
     pub async fn run_with_policy(
         &mut self,
-        state: LabeledState,
+        state: State,
         datastore: &mut Datastore,
-        message: LabeledMessage,
+        message: Message,
         _policy: Policy,
     ) -> Result<String, PlanError> {
+        // Create a new trace of actions
+        let mut trace = Trace::new();
         let mut current_message = message;
         let mut current_state = state;
         loop {
@@ -43,13 +59,13 @@ impl<P: Plan<LabeledState, LabeledMessage, Action = LabeledAction>>
                 .plan(current_state, current_message.clone())
                 .map_err(|e| PlanError::CannotPlan(format!("{:?}", e)))?;
             match action {
-                LabeledAction::Query(_conv_history, _tools) => {
+                Action::Query(_conv_history, _tools) => {
                     // When querying the model, this planning loop is responsible to propages the
                     // labels from the action to the model's response, signifying the inability to
                     // precisely propagate labels through LLMs.
                     todo!()
                 }
-                LabeledAction::MakeCall(ref function, ref args, id) => {
+                Action::MakeCall(ref function, ref args, id) => {
                     // Before making the actual call, we check that the call satisfies the security
                     // policy.
                     // Here both `function` and `args` have a label
@@ -63,13 +79,12 @@ impl<P: Plan<LabeledState, LabeledMessage, Action = LabeledAction>>
                         .find(|&f| f == function)
                         .unwrap()
                         .call(args.clone(), datastore);
-                    // TODO: Create label for this message
-                    current_message = LabeledMessage::new(
-                        Message::ToolResult(tool_result, id),
-                        ProductLattice::new(Confidentiality::low(), Integrity::untrusted()),
-                    )
+                    // The tool call above also issues a result and a label, which we need to
+                    // convert here into a Message and a `Label`
+                    let label = ProductLattice::new(Confidentiality::low(), Integrity::untrusted());
+                    current_message = Message::ToolResult(tool_result, id);
                 }
-                LabeledAction::Finish(result) => return Ok(result),
+                Action::Finish(result) => return Ok(result),
             }
         }
     }
@@ -92,17 +107,17 @@ impl TaintTrackingPlanner {
 }
 
 // Taint-tracking planner which is plugged into the `PlanningLoop`
-impl Plan<LabeledState, LabeledMessage> for TaintTrackingPlanner {
-    type Action = LabeledAction;
+impl Plan<State, Message> for TaintTrackingPlanner {
+    type Action = Action;
     type Error = PlanError;
     // Given a [`LabeledMessage`], a security policy and a [`LabeledState`], return an action with
     // individually labeled components.
     fn plan(
         &mut self,
-        _state: LabeledState,
-        _message: LabeledMessage,
-    ) -> Result<(LabeledState, Self::Action), Self::Error> {
-        let email_universe = crate::tools::EmailAddressUniverse::new(&crate::tools::INBOX);
+        _state: State,
+        _message: Message,
+    ) -> Result<(State, Self::Action), Self::Error> {
+        let _email_universe = crate::tools::EmailAddressUniverse::new(&crate::tools::INBOX);
         todo!()
     }
 }

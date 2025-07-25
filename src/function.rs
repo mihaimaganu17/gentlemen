@@ -2,7 +2,7 @@ use crate::tools::{ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack
 use crate::{Datastore, Label};
 use std::fmt;
 
-#[derive(PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Function(String);
 
 impl Function {
@@ -41,7 +41,7 @@ impl Call for Function {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Args(pub String);
 
 #[derive(Clone)]
