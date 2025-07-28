@@ -1,5 +1,6 @@
-use crate::tools::{ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack_message};
+use crate::tools::{ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack_message, MetaValue, EmailLabel};
 use crate::{Datastore, Label};
+use crate::ifc::Lattice;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -13,15 +14,17 @@ impl Function {
 
 pub trait Call {
     type Args;
-    fn call(&self, args: Self::Args, _datastore: &mut Datastore) -> String;
+    type Output;
+    fn call(&self, args: Self::Args, _datastore: &mut Datastore) -> Self::Output;
 }
 
 impl Call for Function {
     type Args = Args;
+    type Output = String;
     // A function reads from and writes to a global datastore. This allows for interaction between
     // tools and capture side effects through update to the datastore.
     // Currently in this model we return an updated datastore.
-    fn call(&self, args: Self::Args, _datastore: &mut Datastore) -> String {
+    fn call(&self, args: Self::Args, _datastore: &mut Datastore) -> Self::Output {
         match self.0.as_str() {
             "read_emails" => {
                 // Convert args to desired type
@@ -36,16 +39,38 @@ impl Call for Function {
                 println!("{result:?}");
                 serde_json::to_string(&result).unwrap()
             }
-            "read_emails_labeled" => {
-                // Convert args to desired type
-                let args: ReadEmailsArgs = serde_json::from_str(&args.0).unwrap();
-                let result = crate::tools::read_emails_labeled(args, &crate::tools::INBOX);
-                serde_json::to_string(&result).unwrap()
-            }
             _ => panic!("{:?}", self.0),
         }
     }
 }
+
+/// Similar with `Function` but we return the result of the function call along with the `Label` of
+/// the result
+#[derive(Debug, PartialEq, Clone)]
+pub struct MetaFunction<'a>{
+    name: &'a str,
+}
+
+impl<'a> Call for MetaFunction<'a> {
+    type Args = Args;
+    type Output = (String, EmailLabel<'a>);
+    // A function reads from and writes to a global datastore. This allows for interaction between
+    // tools and capture side effects through update to the datastore.
+    // Currently in this model we return an updated datastore.
+    fn call(&self, args: Self::Args, _datastore: &mut Datastore) -> Self::Output {
+        match self.name {
+            "read_emails_labeled" => {
+                // Convert args to desired type
+                let args: ReadEmailsArgs = serde_json::from_str(&args.0).unwrap();
+                let MetaValue { value, label } = crate::tools::read_emails_labeled(args, &crate::tools::INBOX).into_inner();
+                let value = value.into_iter().map(|mv| format!("{:?}", mv.value())).collect::<Vec<_>>();
+                (serde_json::to_string(&value).unwrap(), label)
+            }
+            _ => todo!()
+        }
+    }
+}
+
 
 #[derive(Clone, Debug)]
 pub struct Args(pub String);
@@ -60,47 +85,6 @@ impl fmt::Display for Arg {
         match self {
             Self::Basic(value) => write!(f, "{}", value),
         }
-    }
-}
-
-#[derive(PartialEq, Clone)]
-pub struct LabeledFunction {
-    name: String,
-    label: Label,
-}
-
-impl LabeledFunction {
-    pub fn new(name: String, label: Label) -> Self {
-        Self { name, label }
-    }
-
-    // A function reads from and writes to a global datastore. This allows for interaction between
-    // tools and capture side effects through update to the datastore.
-    // Currently in this model we return an updated datastore.
-    pub fn _call(&self, args: LabeledArgs, datastore: &mut Datastore) -> String {
-        Function::new(self.name.clone()).call(
-            Args(args.0.iter().map(|x| x.arg.to_string()).collect()),
-            datastore,
-        )
-    }
-}
-
-#[derive(Clone)]
-pub struct LabeledArgs(Vec<LabeledArg>);
-
-#[derive(Clone)]
-pub struct LabeledArg {
-    arg: Arg,
-    _label: Label,
-}
-
-impl Call for LabeledFunction {
-    type Args = LabeledArgs;
-    // A function reads from and writes to a global datastore. This allows for interaction between
-    // tools and capture side effects through update to the datastore.
-    // Currently in this model we return an updated datastore.
-    fn call(&self, _args: Self::Args, _datastore: &mut Datastore) -> String {
-        todo!()
     }
 }
 

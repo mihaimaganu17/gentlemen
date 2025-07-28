@@ -271,6 +271,12 @@ pub struct ReadEmailsResultsLabeled<'a> {
     emails: MetaValue<Vec<MetaValue<Email, EmailLabel<'a>>>, EmailLabel<'a>>,
 }
 
+impl<'a> ReadEmailsResultsLabeled<'a> {
+    pub fn into_inner(self) -> MetaValue<Vec<MetaValue<Email, EmailLabel<'a>>>, EmailLabel<'a>> {
+        self.emails
+    }
+}
+
 pub fn read_emails(args: ReadEmailsArgs) -> ReadEmailsResults {
     let count = std::cmp::min(args.count, INBOX.len());
     ReadEmailsResults {
