@@ -71,11 +71,21 @@ impl<L: Lattice, P: Plan<State, MetaValue<Message, L>, Action = Action>> Plannin
                 .plan(current_state, current_message.clone())
                 .map_err(|e| PlanError::CannotPlan(format!("{:?}", e)))?;
             match action {
-                Action::Query(_conv_history, _tools) => {
+                Action::Query(conv_history, tools) => {
                     // When querying the model, this planning loop is responsible to propages the
                     // labels from the action to the model's response, signifying the inability to
                     // precisely propagate labels through LLMs.
-                    todo!()
+
+                    // Build a chat request with all the previous conversation history and the
+                    // available tools
+                    let chat_request = self.model().chat(conv_history.0, tools);
+                    // Send the request and save the first response choice as the new message,
+                    // while also maintaining the label associated with the current loop.
+                    // Note: The response from the LLM should also be checked for PII and policies
+                    // associated with it.
+                    current_message = MetaValue::new(
+                        Message::Chat(chat_request.await?.choices[0].message.clone()),
+                        current_message.label().clone());
                 }
                 Action::MakeCall(ref function, ref args, id) => {
                     // Before making the actual call, we check that the call satisfies the security

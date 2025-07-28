@@ -36,6 +36,12 @@ impl Call for Function {
                 println!("{result:?}");
                 serde_json::to_string(&result).unwrap()
             }
+            "read_emails_labeled" => {
+                // Convert args to desired type
+                let args: ReadEmailsArgs = serde_json::from_str(&args.0).unwrap();
+                let result = crate::tools::read_emails_labeled(args, &crate::tools::INBOX);
+                serde_json::to_string(&result).unwrap()
+            }
             _ => panic!("{:?}", self.0),
         }
     }

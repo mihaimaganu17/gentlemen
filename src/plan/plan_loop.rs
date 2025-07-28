@@ -25,6 +25,10 @@ impl<S, M: Clone, F: Call, P: Plan<S, M>> PlanningLoop<S, M, F, P> {
         self.tools.as_ref()
     }
 
+    pub fn model(&mut self) -> &LlmClient {
+        &self.model
+    }
+
     /// Create a new `PlanninLoop` with an action `planner` a `model` to do the work and available
     /// `tools` that the model can call
     pub fn new(planner: P, model: LlmClient, tools: Vec<F>) -> Self {
