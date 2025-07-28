@@ -1,6 +1,7 @@
 use crate::{
     Action, Call, Confidentiality, Datastore, Function, Integrity, LabeledMessage, Message, Plan,
     PlanningLoop, ProductLattice, State,
+    function::MetaFunction,
     ifc::{InverseLattice, Lattice, PowersetLattice},
     plan::PlanError,
     tools::{Memory, MetaValue},
@@ -51,7 +52,7 @@ impl<L: Lattice> Trace<L> {
 pub type ActionLabel<'a> = ProductLattice<Integrity, InverseLattice<PowersetLattice<&'a str>>>;
 
 impl<L: Lattice, P: Plan<State, MetaValue<Message, L>, Action = Action>>
-    PlanningLoop<State, MetaValue<Message, L>, Function, P>
+    PlanningLoop<State, MetaValue<Message, L>, MetaFunction<'_>, P>
 {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
@@ -98,17 +99,19 @@ impl<L: Lattice, P: Plan<State, MetaValue<Message, L>, Action = Action>>
                         // Do not perform the action
                         continue;
                     }*/
-                    let tool_result = self
+                    let (tool_result, label) = self
                         .tools()
                         .iter()
-                        .find(|&f| f == function)
+                        .find(|&f| f.name() == function.name() )
                         .unwrap()
                         .call(args.clone(), datastore);
                     // The tool call above also issues a result and a label, which we need to
                     // convert here into a Message and a `Label`
-                    let _label =
-                        ProductLattice::new(Confidentiality::low(), Integrity::untrusted());
-                    current_message = Message::ToolResult(tool_result, id);
+                    let current_label = label.join(current_message.label());
+                    current_message = MetaValue::new(
+                        Message::ToolResult(tool_result, id),
+                        current_label
+                    );
                 }
                 Action::Finish(result) => return Ok(result),
             }

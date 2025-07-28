@@ -10,6 +10,10 @@ impl Function {
     pub fn new(inner: String) -> Self {
         Self(inner)
     }
+
+    pub fn name(&self) -> &str {
+        self.0.as_ref()
+    }
 }
 
 pub trait Call {
@@ -71,6 +75,11 @@ impl<'a> Call for MetaFunction<'a> {
     }
 }
 
+impl<'a> MetaFunction<'a> {
+    pub fn name(&self) -> &'a str {
+        self.name
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Args(pub String);
