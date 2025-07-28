@@ -500,8 +500,9 @@ mod tests {
             .run_with_policy(
                 state,
                 &mut datastore,
-                crate::tools::MetaValue::new(Message::Chat(current_message),
-                Label::new(Confidentiality::low(), Integrity::trusted()),
+                crate::tools::MetaValue::new(
+                    Message::Chat(current_message),
+                    Label::new(Confidentiality::low(), Integrity::trusted()),
                 ),
                 Policy,
             )

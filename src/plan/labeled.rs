@@ -1,6 +1,6 @@
 use crate::{
-    Action, Call, Confidentiality, Datastore, Function, Integrity, Message, Plan, PlanningLoop,
-    ProductLattice, State, LabeledMessage,
+    Action, Call, Confidentiality, Datastore, Function, Integrity, LabeledMessage, Message, Plan,
+    PlanningLoop, ProductLattice, State,
     ifc::{InverseLattice, Lattice, PowersetLattice},
     plan::PlanError,
     tools::{Memory, MetaValue},
@@ -50,7 +50,9 @@ impl<L: Lattice> Trace<L> {
 
 pub type ActionLabel<'a> = ProductLattice<Integrity, InverseLattice<PowersetLattice<&'a str>>>;
 
-impl<L: Lattice, P: Plan<State, MetaValue<Message, L>, Action = Action>> PlanningLoop<State, MetaValue<Message, L>, Function, P> {
+impl<L: Lattice, P: Plan<State, MetaValue<Message, L>, Action = Action>>
+    PlanningLoop<State, MetaValue<Message, L>, Function, P>
+{
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
     pub async fn run_with_policy(
@@ -85,7 +87,8 @@ impl<L: Lattice, P: Plan<State, MetaValue<Message, L>, Action = Action>> Plannin
                     // associated with it.
                     current_message = MetaValue::new(
                         Message::Chat(chat_request.await?.choices[0].message.clone()),
-                        current_message.label().clone());
+                        current_message.label().clone(),
+                    );
                 }
                 Action::MakeCall(ref function, ref args, id) => {
                     // Before making the actual call, we check that the call satisfies the security
