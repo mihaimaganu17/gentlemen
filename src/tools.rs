@@ -128,7 +128,7 @@ pub fn readers_label<'a>(
 /// The [`EmailLabel`] is a product lattice of the integrity label and the confidentiality label
 pub type EmailLabel<'a> = ProductLattice<Integrity, InverseLattice<PowersetLattice<&'a str>>>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MetaValue<T: fmt::Debug, L: Lattice> {
     value: T,
     label: L,

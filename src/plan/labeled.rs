@@ -1,6 +1,6 @@
 use crate::{
     Action, Call, Confidentiality, Datastore, Function, Integrity, Message, Plan, PlanningLoop,
-    ProductLattice, State,
+    ProductLattice, State, LabeledMessage,
     ifc::{InverseLattice, Lattice, PowersetLattice},
     plan::PlanError,
     tools::{Memory, MetaValue},
@@ -50,15 +50,14 @@ impl<L: Lattice> Trace<L> {
 
 pub type ActionLabel<'a> = ProductLattice<Integrity, InverseLattice<PowersetLattice<&'a str>>>;
 
-impl<P: Plan<State, Message, Action = Action>> PlanningLoop<State, Message, Function, P> {
+impl<L: Lattice, P: Plan<State, MetaValue<Message, L>, Action = Action>> PlanningLoop<State, MetaValue<Message, L>, Function, P> {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
-    pub async fn run_with_policy<L: Lattice>(
+    pub async fn run_with_policy(
         &mut self,
         state: State,
         datastore: &mut Datastore,
-        message: Message,
-        _label: L,
+        message: MetaValue<Message, L>,
         _policy: Policy,
     ) -> Result<String, PlanError> {
         // Create a new trace of actions
@@ -121,7 +120,7 @@ impl TaintTrackingPlanner {
 }
 
 // Taint-tracking planner which is plugged into the `PlanningLoop`
-impl Plan<State, Message> for TaintTrackingPlanner {
+impl<L: Lattice> Plan<State, MetaValue<Message, L>> for TaintTrackingPlanner {
     type Action = Action;
     type Error = PlanError;
     // Given a [`LabeledMessage`], a security policy and a [`LabeledState`], return an action with
@@ -129,7 +128,7 @@ impl Plan<State, Message> for TaintTrackingPlanner {
     fn plan(
         &mut self,
         _state: State,
-        _message: Message,
+        _message: MetaValue<Message, L>,
     ) -> Result<(State, Self::Action), Self::Error> {
         let _email_universe = crate::tools::EmailAddressUniverse::new(&crate::tools::INBOX);
         todo!()
