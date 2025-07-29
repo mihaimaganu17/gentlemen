@@ -49,9 +49,9 @@ impl<L: Lattice> Trace<L> {
     }
 }
 
-pub type ActionLabel<'a> = ProductLattice<Integrity, InverseLattice<PowersetLattice<&'a str>>>;
+pub type ActionLabel = ProductLattice<Integrity, InverseLattice<PowersetLattice<String>>>;
 
-impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = Action>>
+impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = (Action, ActionLabel)>>
     PlanningLoop<State, MetaValue<Message, EmailLabel>, MetaFunction, P>
 {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
@@ -64,12 +64,13 @@ impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = Action>>
         _policy: Policy,
     ) -> Result<String, PlanError> {
         // Create a new trace of actions
-        let mut _trace: Trace<ActionLabel<'_>> = Trace::new();
+        let mut _trace: Trace<ActionLabel> = Trace::new();
         let mut current_message = message;
         let mut current_state = state;
         loop {
             let action;
-            (current_state, action) = self
+            let action_label;
+            (current_state, (action, action_label)) = self
                 .planner_mut()
                 .plan(current_state, current_message.clone())
                 .map_err(|e| PlanError::CannotPlan(format!("{:?}", e)))?;
@@ -137,7 +138,7 @@ impl TaintTrackingPlanner {
 
 // Taint-tracking planner which is plugged into the `PlanningLoop`
 impl<L: Lattice> Plan<State, MetaValue<Message, L>> for TaintTrackingPlanner {
-    type Action = Action;
+    type Action = (Action, ActionLabel);
     type Error = PlanError;
     // Given a [`LabeledMessage`], a security policy and a [`LabeledState`], return an action with
     // individually labeled components.
