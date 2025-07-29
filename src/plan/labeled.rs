@@ -36,10 +36,6 @@ impl Policy {
 pub struct Trace<L: Lattice>(Vec<MetaValue<String, L>>);
 
 impl<L: Lattice> Trace<L> {
-    pub fn new() -> Self {
-        Self(vec![])
-    }
-
     pub fn into_inner(self) -> Vec<MetaValue<String, L>> {
         self.0
     }
@@ -50,6 +46,12 @@ impl<L: Lattice> Trace<L> {
 
     pub fn value_mut(&mut self) -> &mut Vec<MetaValue<String, L>> {
         &mut self.0
+    }
+}
+
+impl<L: Lattice> Default for Trace<L> {
+    fn default() -> Self {
+        Self(vec![])
     }
 }
 
@@ -68,7 +70,7 @@ impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = (Action, ActionLabe
         _policy: Policy,
     ) -> Result<String, PlanError> {
         // Create a new trace of actions
-        let mut trace: Trace<ActionLabel> = Trace::new();
+        let mut trace: Trace<ActionLabel> = Trace::default();
         let mut current_message = message;
         let mut current_state = state;
         loop {

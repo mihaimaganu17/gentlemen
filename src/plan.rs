@@ -4,7 +4,7 @@ mod plan_loop;
 mod var;
 
 pub use basic::BasicPlanner;
-pub use labeled::{Policy, TaintTrackingPlanner};
+pub use labeled::{Policy, TaintTrackingPlanner, Trace};
 pub use plan_loop::PlanningLoop;
 pub use var::VarPlanner;
 
