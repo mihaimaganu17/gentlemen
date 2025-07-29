@@ -1,6 +1,7 @@
-use crate::tools::{ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack_message, MetaValue, EmailLabel};
-use crate::{Datastore, Label};
-use crate::ifc::Lattice;
+use crate::tools::{
+    EmailLabel, ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack_message,
+};
+use crate::Datastore;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -66,11 +67,16 @@ impl Call for MetaFunction {
             "read_emails_labeled" => {
                 // Convert args to desired type
                 let args: ReadEmailsArgs = serde_json::from_str(&args.0).unwrap();
-                let (value, label) = crate::tools::read_emails_labeled(args, &crate::tools::INBOX).into_inner().into_raw_parts();
-                let value = value.into_iter().map(|mv| format!("{:?}", mv.value())).collect::<Vec<_>>();
+                let (value, label) = crate::tools::read_emails_labeled(args, &crate::tools::INBOX)
+                    .into_inner()
+                    .into_raw_parts();
+                let value = value
+                    .into_iter()
+                    .map(|mv| format!("{:?}", mv.value()))
+                    .collect::<Vec<_>>();
                 (serde_json::to_string(&value).unwrap(), label)
             }
-            _ => todo!()
+            _ => todo!(),
         }
     }
 }

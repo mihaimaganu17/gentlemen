@@ -102,7 +102,12 @@ impl EmailAddressUniverse {
         let inner = emails
             .iter()
             .map(|e| e.sender.to_string())
-            .chain(emails.iter().flat_map(|e| e.receivers).map(|e| e.to_string()))
+            .chain(
+                emails
+                    .iter()
+                    .flat_map(|e| e.receivers)
+                    .map(|e| e.to_string()),
+            )
             .collect::<HashSet<String>>();
 
         Self { inner }
@@ -170,7 +175,7 @@ pub fn label_email(
         .receivers
         .iter()
         .map(|r| r.to_string())
-        .chain([email.sender.to_string()].into_iter())
+        .chain([email.sender.to_string()])
         .collect::<HashSet<String>>();
     let confidentiality = readers_label(readers, address_universe)?;
 
@@ -189,8 +194,7 @@ pub fn label_inbox(
 ) -> Vec<MetaValue<Email, EmailLabel>> {
     emails
         .iter()
-        .map(|e| label_email(e.clone(), address_universe.clone()))
-        .flatten()
+        .flat_map(|e| label_email(e.clone(), address_universe.clone()))
         .collect()
 }
 
@@ -291,10 +295,7 @@ pub fn read_emails(args: ReadEmailsArgs) -> ReadEmailsResults {
 /// Read a desired quantity of emails from the list of `email` filtered by the requested `args`.
 /// The returned list of emails contains a product label of integrity and confidentiality for each
 /// email and one for the list as a whole as well.
-pub fn read_emails_labeled(
-    args: ReadEmailsArgs,
-    emails: &[Email],
-) -> ReadEmailsResultsLabeled {
+pub fn read_emails_labeled(args: ReadEmailsArgs, emails: &[Email]) -> ReadEmailsResultsLabeled {
     // Get the maximum amount of email we could read such that we do not overflow.
     let count = std::cmp::min(args.count, INBOX.len());
     // Label each of the requested emails
@@ -362,9 +363,7 @@ pub struct SendSlackMessageResultLabeled {
     _status: MetaValue<String, EmailLabel>,
 }
 
-pub fn send_slack_message_labeled(
-    args: SendSlackMessageArgs,
-) -> SendSlackMessageResultLabeled {
+pub fn send_slack_message_labeled(args: SendSlackMessageArgs) -> SendSlackMessageResultLabeled {
     println!(
         "Sending {0} to {1} channel {2} preview",
         args.message,
@@ -467,7 +466,10 @@ mod tests {
             Integrity::trusted(),
             InverseLattice::new(
                 PowersetLattice::new(
-                    HashSet::from(["bob.sheffield@magnet.com".to_string(), "alice.hudson@magnet.com".to_string()]),
+                    HashSet::from([
+                        "bob.sheffield@magnet.com".to_string(),
+                        "alice.hudson@magnet.com".to_string(),
+                    ]),
                     HashSet::from([
                         "david.bernard@magnet.com".to_string(),
                         "charlie.hamadou@magnet.com".to_string(),

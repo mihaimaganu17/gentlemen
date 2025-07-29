@@ -1,10 +1,10 @@
 use crate::{
-    Action, Call, Confidentiality, Datastore, Function, Integrity, LabeledMessage, Message, Plan,
+    Action, Call, Datastore, Integrity, Message, Plan,
     PlanningLoop, ProductLattice, State,
     function::MetaFunction,
-    ifc::{InverseLattice, Lattice, PowersetLattice, LatticeError},
+    ifc::{InverseLattice, Lattice, LatticeError, PowersetLattice},
     plan::PlanError,
-    tools::{Memory, MetaValue, EmailLabel},
+    tools::{EmailLabel, Memory, MetaValue},
 };
 use async_openai::types::ChatCompletionTool;
 use std::collections::HashMap;
@@ -102,17 +102,16 @@ impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = Action>>
                     let (tool_result, label) = self
                         .tools()
                         .iter()
-                        .find(|&f| f.name() == function.name() )
+                        .find(|&f| f.name() == function.name())
                         .unwrap()
                         .call(args.clone(), datastore);
                     // The tool call above also issues a result and a label, which we need to
                     // convert here into a Message and a `Label`
-                    let current_label = label.join(current_message.label().clone())
+                    let current_label = label
+                        .join(current_message.label().clone())
                         .ok_or(LatticeError::LabelJoinFailed)?;
-                    current_message = MetaValue::new(
-                        Message::ToolResult(tool_result, id),
-                        current_label
-                    );
+                    current_message =
+                        MetaValue::new(Message::ToolResult(tool_result, id), current_label);
                 }
                 Action::Finish(result) => return Ok(result),
             }

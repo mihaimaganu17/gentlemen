@@ -362,7 +362,7 @@ mod tests {
     #[tokio::test]
     async fn taint_tracking_planner() {
         use crate::{
-            Confidentiality, MetaFunction, Integrity, Label, Message, Policy,
+            Confidentiality, Integrity, Label, Message, MetaFunction, Policy,
             plan::{PlanningLoop, TaintTrackingPlanner},
         };
         use async_openai::types::{
@@ -495,13 +495,16 @@ mod tests {
             ],
         );
 
-        let email_universe: Vec<crate::tools::Email> = crate::tools::INBOX.iter().cloned().collect();
+        let email_universe: Vec<crate::tools::Email> =
+            crate::tools::INBOX.iter().cloned().collect();
         // Create the address universe of all the possible addresses in the email list above
-        let address_universe = crate::tools::EmailAddressUniverse::new(&email_universe).into_inner();
+        let address_universe =
+            crate::tools::EmailAddressUniverse::new(&email_universe).into_inner();
         // Create a label for the least confidentiality possible. This is basically everybody can read
         // everybody
-        let least_confidentiality = crate::tools::readers_label(address_universe.clone(), address_universe)
-            .expect("Failed to build confidentiality label for test");
+        let least_confidentiality =
+            crate::tools::readers_label(address_universe.clone(), address_universe)
+                .expect("Failed to build confidentiality label for test");
 
         let mut datastore = crate::Datastore;
         let response = planning_loop
