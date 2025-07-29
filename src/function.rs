@@ -1,7 +1,7 @@
+use crate::Datastore;
 use crate::tools::{
     EmailLabel, ReadEmailsArgs, SendSlackMessageArgs, read_emails, send_slack_message,
 };
-use crate::Datastore;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]

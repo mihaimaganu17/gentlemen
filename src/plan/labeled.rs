@@ -1,6 +1,5 @@
 use crate::{
-    Action, Call, Datastore, Integrity, Message, Plan,
-    PlanningLoop, ProductLattice, State,
+    Action, Call, Datastore, Integrity, Message, Plan, PlanningLoop, ProductLattice, State,
     function::MetaFunction,
     ifc::{InverseLattice, Lattice, LatticeError, PowersetLattice},
     plan::PlanError,
@@ -80,7 +79,9 @@ impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = (Action, ActionLabe
                 .planner_mut()
                 .plan(current_state, current_message.clone())
                 .map_err(|e| PlanError::CannotPlan(format!("{:?}", e)))?;
-            trace.value_mut().push(MetaValue::new(format!("{:#?}", action), action_label));
+            trace
+                .value_mut()
+                .push(MetaValue::new(format!("{:#?}", action), action_label));
             match action {
                 Action::Query(conv_history, tools) => {
                     // When querying the model, this planning loop is responsible to propages the
@@ -154,7 +155,6 @@ impl<L: Lattice> Plan<State, MetaValue<Message, L>> for TaintTrackingPlanner {
         _state: State,
         _message: MetaValue<Message, L>,
     ) -> Result<(State, Self::Action), Self::Error> {
-        let _email_universe = crate::tools::EmailAddressUniverse::new(&crate::tools::INBOX);
         todo!()
     }
 }
