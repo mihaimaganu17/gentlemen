@@ -93,22 +93,22 @@ pub const INBOX: [Email; 5] = [
 ];
 
 #[derive(Debug)]
-pub struct EmailAddressUniverse<'a> {
-    inner: HashSet<&'a str>,
+pub struct EmailAddressUniverse {
+    inner: HashSet<String>,
 }
 
-impl<'a> EmailAddressUniverse<'a> {
+impl EmailAddressUniverse {
     pub fn new(emails: &[Email]) -> Self {
         let inner = emails
             .iter()
-            .map(|e| e.sender)
-            .chain(emails.iter().flat_map(|e| e.receivers))
-            .collect::<HashSet<_>>();
+            .map(|e| e.sender.to_string())
+            .chain(emails.iter().flat_map(|e| e.receivers).map(|e| e.to_string()))
+            .collect::<HashSet<String>>();
 
         Self { inner }
     }
 
-    pub fn into_inner(self) -> HashSet<&'a str> {
+    pub fn into_inner(self) -> HashSet<String> {
         self.inner
     }
 }
@@ -116,17 +116,17 @@ impl<'a> EmailAddressUniverse<'a> {
 /// Create a `label` for the readers of an email. This label is essentially identifying the level
 /// of confidentiality amongst all the senders and receivers in the `universe` list, by filtering
 /// only the ones in the `readers` list.
-pub fn readers_label<'a>(
-    readers: HashSet<&'a str>,
-    universe: HashSet<&'a str>,
-) -> Result<InverseLattice<PowersetLattice<&'a str>>, LatticeError> {
+pub fn readers_label(
+    readers: HashSet<String>,
+    universe: HashSet<String>,
+) -> Result<InverseLattice<PowersetLattice<String>>, LatticeError> {
     Ok(InverseLattice::new(PowersetLattice::new(
         readers, universe,
     )?))
 }
 
 /// The [`EmailLabel`] is a product lattice of the integrity label and the confidentiality label
-pub type EmailLabel<'a> = ProductLattice<Integrity, InverseLattice<PowersetLattice<&'a str>>>;
+pub type EmailLabel = ProductLattice<Integrity, InverseLattice<PowersetLattice<String>>>;
 
 #[derive(Debug, Clone)]
 pub struct MetaValue<T: fmt::Debug, L: Lattice> {
@@ -146,6 +146,10 @@ impl<T: fmt::Debug, L: Lattice> MetaValue<T, L> {
     pub fn label(&self) -> &L {
         &self.label
     }
+
+    pub fn into_raw_parts(self) -> (T, L) {
+        (self.value, self.label)
+    }
 }
 
 /// Create label which specifies the integrity and confidentiality for that `email` and associate it
@@ -154,8 +158,8 @@ impl<T: fmt::Debug, L: Lattice> MetaValue<T, L> {
 /// based on the `address_universe` passed as a value.
 pub fn label_email(
     email: Email,
-    address_universe: HashSet<&str>,
-) -> Result<MetaValue<Email, EmailLabel<'_>>, LatticeError> {
+    address_universe: HashSet<String>,
+) -> Result<MetaValue<Email, EmailLabel>, LatticeError> {
     let integrity = if email.sender.ends_with("@magnet.com") {
         Integrity::trusted()
     } else {
@@ -165,9 +169,9 @@ pub fn label_email(
     let readers = email
         .receivers
         .iter()
-        .chain([email.sender].iter())
-        .copied()
-        .collect::<HashSet<&str>>();
+        .map(|r| r.to_string())
+        .chain([email.sender.to_string()].into_iter())
+        .collect::<HashSet<String>>();
     let confidentiality = readers_label(readers, address_universe)?;
 
     Ok(MetaValue {
@@ -179,10 +183,10 @@ pub fn label_email(
 /// Create a label for integrity and confidentiality for each email in the list of `emails`.
 /// Integrity is infered based on the domain of the email's sender and confidentiality is inferred
 /// based on the `address_universe` passed as a value.
-pub fn label_inbox<'a>(
-    emails: &'a [Email],
-    address_universe: HashSet<&'a str>,
-) -> Vec<MetaValue<Email, EmailLabel<'a>>> {
+pub fn label_inbox(
+    emails: &[Email],
+    address_universe: HashSet<String>,
+) -> Vec<MetaValue<Email, EmailLabel>> {
     emails
         .iter()
         .map(|e| label_email(e.clone(), address_universe.clone()))
@@ -192,9 +196,9 @@ pub fn label_inbox<'a>(
 
 /// Create a single label for an entire list of labeled emails by applying join operations on their
 /// integrity labels and their confidentiality labels respectively.
-pub fn label_labeled_email_list<'a>(
-    emails: Vec<MetaValue<Email, EmailLabel<'a>>>,
-) -> Result<MetaValue<Vec<MetaValue<Email, EmailLabel<'a>>>, EmailLabel<'a>>, LatticeError> {
+pub fn label_labeled_email_list(
+    emails: Vec<MetaValue<Email, EmailLabel>>,
+) -> Result<MetaValue<Vec<MetaValue<Email, EmailLabel>>, EmailLabel>, LatticeError> {
     // Make an overall integrity label by joining all the labels of the email list. In this
     // scenario, the lowest integrity scenario wins.
     let Some(integrity) = emails
@@ -266,13 +270,13 @@ pub struct ReadEmailsResults {
 
 // Represents a list of emails to be fed into the LLM for reading
 #[derive(Debug)]
-pub struct ReadEmailsResultsLabeled<'a> {
+pub struct ReadEmailsResultsLabeled {
     // List of emails we read
-    emails: MetaValue<Vec<MetaValue<Email, EmailLabel<'a>>>, EmailLabel<'a>>,
+    emails: MetaValue<Vec<MetaValue<Email, EmailLabel>>, EmailLabel>,
 }
 
-impl<'a> ReadEmailsResultsLabeled<'a> {
-    pub fn into_inner(self) -> MetaValue<Vec<MetaValue<Email, EmailLabel<'a>>>, EmailLabel<'a>> {
+impl ReadEmailsResultsLabeled {
+    pub fn into_inner(self) -> MetaValue<Vec<MetaValue<Email, EmailLabel>>, EmailLabel> {
         self.emails
     }
 }
@@ -287,10 +291,10 @@ pub fn read_emails(args: ReadEmailsArgs) -> ReadEmailsResults {
 /// Read a desired quantity of emails from the list of `email` filtered by the requested `args`.
 /// The returned list of emails contains a product label of integrity and confidentiality for each
 /// email and one for the list as a whole as well.
-pub fn read_emails_labeled<'a>(
+pub fn read_emails_labeled(
     args: ReadEmailsArgs,
-    emails: &'a [Email],
-) -> ReadEmailsResultsLabeled<'a> {
+    emails: &[Email],
+) -> ReadEmailsResultsLabeled {
     // Get the maximum amount of email we could read such that we do not overflow.
     let count = std::cmp::min(args.count, INBOX.len());
     // Label each of the requested emails
@@ -353,14 +357,14 @@ pub fn send_slack_message(args: SendSlackMessageArgs) -> SendSlackMessageResult 
 }
 
 #[derive(Debug)]
-pub struct SendSlackMessageResultLabeled<'a> {
+pub struct SendSlackMessageResultLabeled {
     // The success or failure status of the message sending
-    _status: MetaValue<String, EmailLabel<'a>>,
+    _status: MetaValue<String, EmailLabel>,
 }
 
-pub fn send_slack_message_labeled<'a>(
+pub fn send_slack_message_labeled(
     args: SendSlackMessageArgs,
-) -> SendSlackMessageResultLabeled<'a> {
+) -> SendSlackMessageResultLabeled {
     println!(
         "Sending {0} to {1} channel {2} preview",
         args.message,
@@ -463,14 +467,14 @@ mod tests {
             Integrity::trusted(),
             InverseLattice::new(
                 PowersetLattice::new(
-                    HashSet::from(["bob.sheffield@magnet.com", "alice.hudson@magnet.com"]),
+                    HashSet::from(["bob.sheffield@magnet.com".to_string(), "alice.hudson@magnet.com".to_string()]),
                     HashSet::from([
-                        "david.bernard@magnet.com",
-                        "charlie.hamadou@magnet.com",
-                        "robert@universaltechadvise.biz",
-                        "bob.sheffield@magnet.com",
-                        "payouts@onlyfans.com",
-                        "alice.hudson@magnet.com",
+                        "david.bernard@magnet.com".to_string(),
+                        "charlie.hamadou@magnet.com".to_string(),
+                        "robert@universaltechadvise.biz".to_string(),
+                        "bob.sheffield@magnet.com".to_string(),
+                        "payouts@onlyfans.com".to_string(),
+                        "alice.hudson@magnet.com".to_string(),
                     ]),
                 )
                 .expect("Cannot create powerset lattice"),
@@ -482,14 +486,14 @@ mod tests {
             Integrity::untrusted(),
             InverseLattice::new(
                 PowersetLattice::new(
-                    HashSet::from(["bob.sheffield@magnet.com"]),
+                    HashSet::from(["bob.sheffield@magnet.com".to_string()]),
                     HashSet::from([
-                        "robert@universaltechadvise.biz",
-                        "david.bernard@magnet.com",
-                        "charlie.hamadou@magnet.com",
-                        "bob.sheffield@magnet.com",
-                        "payouts@onlyfans.com",
-                        "alice.hudson@magnet.com",
+                        "robert@universaltechadvise.biz".to_string(),
+                        "david.bernard@magnet.com".to_string(),
+                        "charlie.hamadou@magnet.com".to_string(),
+                        "bob.sheffield@magnet.com".to_string(),
+                        "payouts@onlyfans.com".to_string(),
+                        "alice.hudson@magnet.com".to_string(),
                     ]),
                 )
                 .expect("Cannot create powerset lattice"),
@@ -512,20 +516,20 @@ mod tests {
             InverseLattice::new(
                 PowersetLattice::new(
                     HashSet::from([
-                        "robert@universaltechadvise.biz",
-                        "david.bernard@magnet.com",
-                        "charlie.hamadou@magnet.com",
-                        "bob.sheffield@magnet.com",
-                        "payouts@onlyfans.com",
-                        "alice.hudson@magnet.com",
+                        "robert@universaltechadvise.biz".to_string(),
+                        "david.bernard@magnet.com".to_string(),
+                        "charlie.hamadou@magnet.com".to_string(),
+                        "bob.sheffield@magnet.com".to_string(),
+                        "payouts@onlyfans.com".to_string(),
+                        "alice.hudson@magnet.com".to_string(),
                     ]),
                     HashSet::from([
-                        "robert@universaltechadvise.biz",
-                        "david.bernard@magnet.com",
-                        "charlie.hamadou@magnet.com",
-                        "bob.sheffield@magnet.com",
-                        "payouts@onlyfans.com",
-                        "alice.hudson@magnet.com",
+                        "robert@universaltechadvise.biz".to_string(),
+                        "david.bernard@magnet.com".to_string(),
+                        "charlie.hamadou@magnet.com".to_string(),
+                        "bob.sheffield@magnet.com".to_string(),
+                        "payouts@onlyfans.com".to_string(),
+                        "alice.hudson@magnet.com".to_string(),
                     ]),
                 )
                 .expect("Cannot create powerset lattice"),
@@ -537,22 +541,22 @@ mod tests {
     #[test]
     fn send_slack_message_schema() {
         let parameters = json!({
-            "type": "object",
+            "type": "object".to_string(),
             "properties": {
                 "channel": {
-                    "type": "string",
-                    "description": "The channel where the message should be sent",
+                    "type": "string".to_string(),
+                    "description": "The channel where the message should be sent".to_string(),
                 },
                 "message": {
-                    "type": "string",
-                    "description": "The message to be sent",
+                    "type": "string".to_string(),
+                    "description": "The message to be sent".to_string(),
                 },
                 "preview": {
-                    "type": "string",
-                    "description": "Whether or not to include the link preview",
+                    "type": "string".to_string(),
+                    "description": "Whether or not to include the link preview".to_string(),
                 },
             },
-            "required": ["channel", "message", "preview"],
+            "required": ["channel".to_string(), "message".to_string(), "preview"],
             "additionalProperties": false,
         });
         let variables = vec![Variable::new("Id1".to_string())];

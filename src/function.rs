@@ -51,22 +51,22 @@ impl Call for Function {
 /// Similar with `Function` but we return the result of the function call along with the `Label` of
 /// the result
 #[derive(Debug, PartialEq, Clone)]
-pub struct MetaFunction<'a>{
-    name: &'a str,
+pub struct MetaFunction {
+    name: String,
 }
 
-impl<'a> Call for MetaFunction<'a> {
+impl Call for MetaFunction {
     type Args = Args;
-    type Output = (String, EmailLabel<'a>);
+    type Output = (String, EmailLabel);
     // A function reads from and writes to a global datastore. This allows for interaction between
     // tools and capture side effects through update to the datastore.
     // Currently in this model we return an updated datastore.
     fn call(&self, args: Self::Args, _datastore: &mut Datastore) -> Self::Output {
-        match self.name {
+        match self.name.as_ref() {
             "read_emails_labeled" => {
                 // Convert args to desired type
                 let args: ReadEmailsArgs = serde_json::from_str(&args.0).unwrap();
-                let MetaValue { value, label } = crate::tools::read_emails_labeled(args, &crate::tools::INBOX).into_inner();
+                let (value, label) = crate::tools::read_emails_labeled(args, &crate::tools::INBOX).into_inner().into_raw_parts();
                 let value = value.into_iter().map(|mv| format!("{:?}", mv.value())).collect::<Vec<_>>();
                 (serde_json::to_string(&value).unwrap(), label)
             }
@@ -75,9 +75,13 @@ impl<'a> Call for MetaFunction<'a> {
     }
 }
 
-impl<'a> MetaFunction<'a> {
-    pub fn name(&self) -> &'a str {
-        self.name
+impl MetaFunction {
+    pub fn new(name: String) -> Self {
+        Self { name }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 }
 

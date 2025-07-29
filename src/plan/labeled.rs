@@ -2,9 +2,9 @@ use crate::{
     Action, Call, Confidentiality, Datastore, Function, Integrity, LabeledMessage, Message, Plan,
     PlanningLoop, ProductLattice, State,
     function::MetaFunction,
-    ifc::{InverseLattice, Lattice, PowersetLattice},
+    ifc::{InverseLattice, Lattice, PowersetLattice, LatticeError},
     plan::PlanError,
-    tools::{Memory, MetaValue},
+    tools::{Memory, MetaValue, EmailLabel},
 };
 use async_openai::types::ChatCompletionTool;
 use std::collections::HashMap;
@@ -51,8 +51,8 @@ impl<L: Lattice> Trace<L> {
 
 pub type ActionLabel<'a> = ProductLattice<Integrity, InverseLattice<PowersetLattice<&'a str>>>;
 
-impl<L: Lattice, P: Plan<State, MetaValue<Message, L>, Action = Action>>
-    PlanningLoop<State, MetaValue<Message, L>, MetaFunction<'_>, P>
+impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = Action>>
+    PlanningLoop<State, MetaValue<Message, EmailLabel>, MetaFunction, P>
 {
     // At each iteration of the loop, the current `state`, the latest `message` of the conversation
     // and the `datastore` are passed.
@@ -60,7 +60,7 @@ impl<L: Lattice, P: Plan<State, MetaValue<Message, L>, Action = Action>>
         &mut self,
         state: State,
         datastore: &mut Datastore,
-        message: MetaValue<Message, L>,
+        message: MetaValue<Message, EmailLabel>,
         _policy: Policy,
     ) -> Result<String, PlanError> {
         // Create a new trace of actions
@@ -107,7 +107,8 @@ impl<L: Lattice, P: Plan<State, MetaValue<Message, L>, Action = Action>>
                         .call(args.clone(), datastore);
                     // The tool call above also issues a result and a label, which we need to
                     // convert here into a Message and a `Label`
-                    let current_label = label.join(current_message.label());
+                    let current_label = label.join(current_message.label().clone())
+                        .ok_or(LatticeError::LabelJoinFailed)?;
                     current_message = MetaValue::new(
                         Message::ToolResult(tool_result, id),
                         current_label

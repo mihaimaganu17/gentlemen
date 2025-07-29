@@ -211,6 +211,7 @@ pub enum LatticeError {
     SubsetNotInUniverse,
     IntegrityJoinFailed,
     ConfidentialityJoinFailed,
+    LabelJoinFailed,
 }
 
 pub type Label = ProductLattice<Confidentiality, Integrity>;

@@ -8,6 +8,7 @@ pub use labeled::{Policy, TaintTrackingPlanner};
 pub use plan_loop::PlanningLoop;
 pub use var::VarPlanner;
 
+use crate::ifc::LatticeError;
 use async_openai::error::OpenAIError;
 use serde_json::Value;
 
@@ -38,6 +39,7 @@ pub enum PlanError {
     InvalidArgumentSchema(Value),
     InvalidMessage(String),
     MissingVariable(String),
+    LatticeError(LatticeError),
 }
 
 impl From<OpenAIError> for PlanError {
@@ -49,5 +51,11 @@ impl From<OpenAIError> for PlanError {
 impl From<serde_json::Error> for PlanError {
     fn from(err: serde_json::Error) -> Self {
         Self::SerdeJsonError(err)
+    }
+}
+
+impl From<LatticeError> for PlanError {
+    fn from(err: LatticeError) -> Self {
+        Self::LatticeError(err)
     }
 }
