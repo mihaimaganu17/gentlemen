@@ -76,7 +76,10 @@ impl Call for MetaFunction {
                     .collect::<Vec<_>>();
                 (serde_json::to_string(&value).unwrap(), label)
             }
-            _ => todo!(),
+            _ => {
+                println!("Trying to call function {:#?}", self.name);
+                todo!()
+            }
         }
     }
 }
