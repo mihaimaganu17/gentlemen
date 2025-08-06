@@ -1,16 +1,16 @@
 use crate::{
-    Action, Call, Datastore, Integrity, Message, Plan, PlanningLoop, ProductLattice, State, Function, Args,
+    Action, Args, Call, Datastore, Function, Integrity, Message, Plan, PlanningLoop,
+    ProductLattice, State,
     function::MetaFunction,
     ifc::{InverseLattice, Lattice, LatticeError, PowersetLattice},
     plan::{PlanError, Policy},
-    tools::{EmailLabel, Memory, MetaValue},
+    tools::{EmailLabel, MetaValue},
 };
-use serde_json::{Map, Value};
 use async_openai::types::{
     ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestToolMessageArgs,
     ChatCompletionRequestUserMessageArgs, ChatCompletionTool, FunctionCall, Role,
 };
-use std::collections::HashMap;
+use serde_json::{Map, Value};
 
 // Planners get instrumented with dynamic information-flow control via taint-tracking. For this,
 // labels are attached to messages, actions, tool arguments and results, and vairables in the
@@ -131,15 +131,11 @@ impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = (Action, ActionLabe
 
 pub struct TaintTrackingPlanner {
     tools: Vec<ChatCompletionTool>,
-    memory: Memory,
 }
 
 impl TaintTrackingPlanner {
     pub fn new(tools: Vec<ChatCompletionTool>) -> Self {
-        Self {
-            tools,
-            memory: HashMap::new(),
-        }
+        Self { tools }
     }
 
     /// Normalize the arguments passed by the LLM.

@@ -461,7 +461,7 @@ mod tests {
                 .unwrap(),
         ];
 
-        let tt_planner = TaintTrackingPlanner::new(tools.clone(), );
+        let tt_planner = TaintTrackingPlanner::new(tools.clone());
 
         let client = LlmClient::openai();
         //let client = LlmClient::local_llama31();

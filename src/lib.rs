@@ -9,7 +9,9 @@ pub mod tools;
 pub use function::{Args, Call, Function, MetaFunction};
 pub use ifc::{Confidentiality, Integrity, Label, ProductLattice};
 pub use message::{LabeledMessage, Message};
-pub use plan::{BasicPlanner, Plan, PlanningLoop, Policy, TaintTrackingPlanner, Trace, VarPlanner};
+pub use plan::{
+    BasicPlanner, Plan, PlanningLoop, Policy, TaintTrackingPlanner, Trace, VarPlanner, policy,
+};
 pub use state::{ConversationHistory, LabeledConversationHistory, LabeledState, State};
 
 // use plan::Variable;
