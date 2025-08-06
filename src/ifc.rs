@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::HashSet, hash::Hash};
 
-pub trait Lattice: PartialOrd + Sized + Clone {
+pub trait Lattice: PartialOrd + Sized + Clone + std::fmt::Debug {
     /// Returns the least upper bound between `self` and `other` values
     fn join(self, other: Self) -> Option<Self>;
     /// Returns the greatest lower bound between `self` and `other` values
@@ -160,7 +160,7 @@ impl<T: Eq + Hash> PartialOrd for PowersetLattice<T> {
     }
 }
 
-impl<T: Eq + Hash + Clone> Lattice for PowersetLattice<T> {
+impl<T: Eq + Hash + Clone + std::fmt::Debug> Lattice for PowersetLattice<T> {
     /// Returns the least upper bound between `self` and `other` values
     fn join(self, other: Self) -> Option<Self> {
         // Union of the 2 subsets

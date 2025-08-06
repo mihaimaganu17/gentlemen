@@ -1,5 +1,5 @@
 use super::labeled::Trace;
-use crate::ifc::Lattice;
+use crate::{Action, tools::SendSlackMessageArgs, ifc::Lattice};
 
 pub fn contains_url(text: &str) -> Result<bool, regex::Error> {
     let pattern =
@@ -13,11 +13,17 @@ pub fn contains_url(text: &str) -> Result<bool, regex::Error> {
 
 /// Policy that stops sending untrusted Teams messages containing a URL.
 pub fn policy_no_untrusted_url<L: Lattice>(trace: Trace<L>) -> Option<PolicyViolation> {
-    if trace.value().len() < 1 {
-        return None;
+    if let (Action::MakeCall(function, args, id), label) = trace.value().last()?.raw_parts() {
+        if function.name().starts_with("send_teams_message") {
+            println!("Checking tool call {:?} -> {:?}({:?}) with label {:?}", id, function, args, label);
+            let args: SendSlackMessageArgs = serde_json::from_str(&args.0).ok()?;
+            // Check if the integrity label of the message is `untrusted` and if the message
+            // contains an URL.
+        }
+        None
+    } else {
+        None
     }
-
-    None
 }
 
 #[derive(Debug)]

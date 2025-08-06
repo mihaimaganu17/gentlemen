@@ -155,6 +155,10 @@ impl<T: fmt::Debug, L: Lattice> MetaValue<T, L> {
     pub fn into_raw_parts(self) -> (T, L) {
         (self.value, self.label)
     }
+
+    pub fn raw_parts(&self) -> (&T, &L) {
+        (&self.value, &self.label)
+    }
 }
 
 /// Create label which specifies the integrity and confidentiality for that `email` and associate it
