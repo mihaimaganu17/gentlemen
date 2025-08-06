@@ -2,9 +2,8 @@ use super::labeled::{ActionLabel, Trace};
 use crate::{Action, Integrity, tools::SendSlackMessageArgs};
 
 pub fn contains_url(text: &str) -> Result<bool, regex::Error> {
-    let pattern = r"http[s]?://
-        (?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|
-        (?:%[0-9a-fA-F][0-9a-fA-F]))+"; // communication protocol + domain + port
+    let pattern = r"http[s]?:\/\/
+        (?:[a-zA-Z]|[0-9]|[$-_@.&+.])+\.[a-zA-Z]{2,}";
 
     let re = regex::Regex::new(pattern)?;
     Ok(re.is_match(text))
