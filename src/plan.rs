@@ -2,6 +2,7 @@ mod basic;
 mod labeled;
 mod plan_loop;
 mod var;
+mod policy;
 
 pub use basic::BasicPlanner;
 pub use labeled::{Policy, TaintTrackingPlanner, Trace};
