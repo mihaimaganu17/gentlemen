@@ -36,18 +36,18 @@ impl Policy {
 
 // A trace is a sequence of actions that the model takes starting from a user's Message::Query
 // and ending with an `Action::Finish`.
-pub struct Trace<L: Lattice>(Vec<MetaValue<String, L>>);
+pub struct Trace<L: Lattice>(Vec<MetaValue<Action, L>>);
 
 impl<L: Lattice> Trace<L> {
-    pub fn into_inner(self) -> Vec<MetaValue<String, L>> {
+    pub fn into_inner(self) -> Vec<MetaValue<Action, L>> {
         self.0
     }
 
-    pub fn value(&self) -> &[MetaValue<String, L>] {
+    pub fn value(&self) -> &[MetaValue<Action, L>] {
         &self.0
     }
 
-    pub fn value_mut(&mut self) -> &mut Vec<MetaValue<String, L>> {
+    pub fn value_mut(&mut self) -> &mut Vec<MetaValue<Action, L>> {
         &mut self.0
     }
 }
@@ -85,7 +85,7 @@ impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = (Action, ActionLabe
                 .map_err(|e| PlanError::CannotPlan(format!("{:?}", e)))?;
             trace
                 .value_mut()
-                .push(MetaValue::new(format!("{:#?}", action), action_label));
+                .push(MetaValue::new(action.clone(), action_label));
             match action {
                 Action::Query(conv_history, tools) => {
                     // When querying the model, this planning loop is responsible to propages the

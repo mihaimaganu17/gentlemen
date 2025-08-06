@@ -17,7 +17,7 @@ use async_openai::types::{ChatCompletionRequestMessage, ChatCompletionTool};
 
 pub struct Datastore;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Action {
     // Query the model with a specific conversation history and available tools
     Query(
