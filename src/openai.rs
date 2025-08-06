@@ -362,7 +362,7 @@ mod tests {
     #[tokio::test]
     async fn taint_tracking_planner() {
         use crate::{
-            Confidentiality, Integrity, Label, Message, MetaFunction, Policy,
+            Integrity, Message, MetaFunction, Policy,
             plan::{PlanningLoop, TaintTrackingPlanner},
         };
         use async_openai::types::{
