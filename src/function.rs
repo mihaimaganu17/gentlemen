@@ -76,6 +76,16 @@ impl Call for MetaFunction {
                     .collect::<Vec<_>>();
                 (serde_json::to_string(&value).unwrap(), label)
             }
+            "send_slack_message_labeled" => {
+                // Convert args to desired type
+                let args: SendSlackMessageArgs = serde_json::from_str(&args.0).unwrap();
+
+                let (value, label) = crate::tools::send_slack_message_labeled(args)
+                    .into_inner()
+                    .into_raw_parts();
+
+                (serde_json::to_string(&value).unwrap(), label)
+            }
             _ => {
                 println!("Trying to call function {:#?}", self.name);
                 todo!()

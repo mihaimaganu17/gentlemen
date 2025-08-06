@@ -390,7 +390,7 @@ mod tests {
             vec![
             ChatCompletionToolArgs::default()
                 .function(FunctionObject {
-                    name: "read_emails".to_string(),
+                    name: "read_emails_labeled".to_string(),
                     description: Some(
                         "Reading a number of {count} email from the inbox".to_string(),
                     ),
@@ -411,7 +411,7 @@ mod tests {
                 .unwrap(),
             ChatCompletionToolArgs::default()
                 .function(FunctionObject {
-                    name: "send_slack_message".to_string(),
+                    name: "send_slack_message_labeled".to_string(),
                     description: Some(
                         "Sends a {message} to a slack {channel} with an optional {preview}"
                             .to_string(),
@@ -490,8 +490,8 @@ mod tests {
             tt_planner,
             client,
             vec![
-                MetaFunction::new("read_emails".to_string()),
-                MetaFunction::new("send_slack_message".to_string()),
+                MetaFunction::new("read_emails_labeled".to_string()),
+                MetaFunction::new("send_slack_message_labeled".to_string()),
             ],
         );
 

@@ -40,6 +40,7 @@ pub enum PlanError {
     InvalidMessage(String),
     MissingVariable(String),
     LatticeError(LatticeError),
+    FunctionNotFound(String),
 }
 
 impl From<OpenAIError> for PlanError {

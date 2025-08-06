@@ -116,7 +116,7 @@ impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = (Action, ActionLabe
                         .tools()
                         .iter()
                         .find(|&f| f.name() == function.name())
-                        .unwrap()
+                        .ok_or(PlanError::FunctionNotFound(function.name().to_string()))?
                         .call(args.clone(), datastore);
                     // The tool call above also issues a result and a label, which we need to
                     // convert here into a Message and a `Label`

@@ -360,7 +360,13 @@ pub fn send_slack_message(args: SendSlackMessageArgs) -> SendSlackMessageResult 
 #[derive(Debug)]
 pub struct SendSlackMessageResultLabeled {
     // The success or failure status of the message sending
-    _status: MetaValue<String, EmailLabel>,
+    status: MetaValue<String, EmailLabel>,
+}
+
+impl SendSlackMessageResultLabeled {
+    pub fn into_inner(self) -> MetaValue<String, EmailLabel> {
+        self.status
+    }
 }
 
 pub fn send_slack_message_labeled(args: SendSlackMessageArgs) -> SendSlackMessageResultLabeled {
@@ -376,7 +382,7 @@ pub fn send_slack_message_labeled(args: SendSlackMessageArgs) -> SendSlackMessag
         readers_label(email_universe.clone(), email_universe).unwrap(),
     );
     SendSlackMessageResultLabeled {
-        _status: MetaValue::new("Message sent!".to_string(), label),
+        status: MetaValue::new("Message sent!".to_string(), label),
     }
 }
 
@@ -537,7 +543,7 @@ mod tests {
                 .expect("Cannot create powerset lattice"),
             ),
         );
-        assert!(&expected_slack_label == send_slack_result._status.label());
+        assert!(&expected_slack_label == send_slack_result.status.label());
     }
 
     #[test]
