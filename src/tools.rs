@@ -341,6 +341,10 @@ impl SendSlackMessageArgs {
             _ => return Err(de::Error::custom("wrong type")),
         })
     }
+
+    pub fn message(&self) -> &str {
+        &self.message
+    }
 }
 
 #[derive(Serialize, Debug)]
