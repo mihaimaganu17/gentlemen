@@ -2,12 +2,13 @@ mod basic;
 mod labeled;
 mod plan_loop;
 mod var;
-mod policy;
+pub mod policy;
 
 pub use basic::BasicPlanner;
-pub use labeled::{Policy, TaintTrackingPlanner, Trace};
+pub use labeled::{TaintTrackingPlanner, Trace};
 pub use plan_loop::PlanningLoop;
 pub use var::VarPlanner;
+pub use policy::{Policy, PolicyViolation};
 
 use crate::ifc::LatticeError;
 use async_openai::error::OpenAIError;

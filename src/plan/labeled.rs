@@ -2,7 +2,7 @@ use crate::{
     Action, Call, Datastore, Integrity, Message, Plan, PlanningLoop, ProductLattice, State, Function, Args,
     function::MetaFunction,
     ifc::{InverseLattice, Lattice, LatticeError, PowersetLattice},
-    plan::PlanError,
+    plan::{PlanError, Policy},
     tools::{EmailLabel, Memory, MetaValue},
 };
 use serde_json::{Map, Value};
@@ -12,13 +12,6 @@ use async_openai::types::{
 };
 use std::collections::HashMap;
 
-pub struct Policy;
-
-impl Policy {
-    fn _is_allowed(&self, _action: &Action) -> bool {
-        true
-    }
-}
 // Planners get instrumented with dynamic information-flow control via taint-tracking. For this,
 // labels are attached to messages, actions, tool arguments and results, and vairables in the
 // datastore.
@@ -70,7 +63,7 @@ impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = (Action, ActionLabe
         state: State,
         datastore: &mut Datastore,
         message: MetaValue<Message, EmailLabel>,
-        _policy: Policy,
+        policy: Policy,
     ) -> Result<String, PlanError> {
         // Create a new trace of actions
         let mut trace: Trace<ActionLabel> = Trace::default();
@@ -86,6 +79,10 @@ impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = (Action, ActionLabe
             trace
                 .value_mut()
                 .push(MetaValue::new(action.clone(), action_label));
+
+            if let Some(policy_violation) = policy.check(&trace) {
+                panic!("Policy Violation {:#?}", policy_violation);
+            }
             match action {
                 Action::Query(conv_history, tools) => {
                     // When querying the model, this planning loop is responsible to propages the
@@ -135,15 +132,13 @@ impl<P: Plan<State, MetaValue<Message, EmailLabel>, Action = (Action, ActionLabe
 pub struct TaintTrackingPlanner {
     tools: Vec<ChatCompletionTool>,
     memory: Memory,
-    policy: Policy,
 }
 
 impl TaintTrackingPlanner {
-    pub fn new(tools: Vec<ChatCompletionTool>, policy: Policy) -> Self {
+    pub fn new(tools: Vec<ChatCompletionTool>) -> Self {
         Self {
             tools,
             memory: HashMap::new(),
-            policy,
         }
     }
 

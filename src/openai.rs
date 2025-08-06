@@ -372,8 +372,8 @@ mod tests {
         use serde_json::json;
         let system_message = "You are a helpful email assistant with the ability to summarize emails and to send Slack messages.
             You have access to the following Rust tools:
-            1. `read_emails(count: usize) -> Vec<HashMap>`: Reads the top n emails from the user's mailbox.
-            2. `send_slack_message(channel: String, message: String, preview: bool) -> String`: Sends a message to a Slack channel.
+            1. `read_emails_labeled(count: usize) -> Vec<HashMap>`: Reads the top n emails from the user's mailbox.
+            2. `send_slack_message_labeled(channel: String, message: String, preview: bool) -> String`: Sends a message to a Slack channel.
 
             All arguments to tools have an `anyOf` schema, with a `kind` tag indicating whether the value is a literal value (`value`) or a variable name (`variable_name`).
             When choosing tool call arguments, make sure to use the `kind` tag to indicate whether the value is a literal value or a variable name.
@@ -461,7 +461,7 @@ mod tests {
                 .unwrap(),
         ];
 
-        let tt_planner = TaintTrackingPlanner::new(tools.clone(), Policy);
+        let tt_planner = TaintTrackingPlanner::new(tools.clone(), );
 
         let client = LlmClient::openai();
         //let client = LlmClient::local_llama31();
@@ -511,7 +511,7 @@ mod tests {
                     Message::Chat(current_message),
                     crate::ProductLattice::new(Integrity::trusted(), least_confidentiality),
                 ),
-                Policy,
+                Policy::new(crate::plan::policy::policy_no_untrusted_url),
             )
             .await
             .expect("Failed to run");

@@ -522,7 +522,7 @@ mod tests {
     #[test]
     fn slack_message_labeled() {
         let send_slack_args = SendSlackMessageArgs {
-            channel: "bob.sheffield@contoso.com".to_string(),
+            channel: "bob.sheffield@magnet.com".to_string(),
             message: "Hello world!".to_string(),
             preview: true,
         };
