@@ -60,7 +60,7 @@ impl LlmClient {
         messages: M,
         tools: T,
     ) -> Result<CreateChatCompletionResponse, OpenAIError> {
-        let model = "gpt-4o-mini";
+        let model = "gpt-4o";
         // Create a `CreateCompletionRequest`
         let request = CreateChatCompletionRequestArgs::default()
             .model(model)
